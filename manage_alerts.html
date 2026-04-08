@@ -3,17 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="color-scheme" content="light dark">
     <title>Manage Alerts</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg: var(--tg-theme-bg-color, #fff);
-            --text: var(--tg-theme-text-color, #000);
-            --hint: var(--tg-theme-hint-color, #888);
+            --bg: var(--tg-theme-bg-color, #ffffff);
+            --text: var(--tg-theme-text-color, #1a1a1a);
+            --hint: var(--tg-theme-hint-color, #8e8e93);
             --btn: var(--tg-theme-button-color, #3390ec);
-            --btn-txt: var(--tg-theme-button-text-color, #fff);
-            --secondary-bg: var(--tg-theme-secondary-bg-color, #f1f1f1);
+            --btn-txt: var(--tg-theme-button-text-color, #ffffff);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
             --danger: #ff3b30;
+            --danger-bg: rgba(255, 59, 48, 0.08);
+            --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --divider: rgba(0, 0, 0, 0.06);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: var(--tg-theme-bg-color, #1c1c1e);
+                --text: var(--tg-theme-text-color, #f2f2f7);
+                --hint: var(--tg-theme-hint-color, #8e8e93);
+                --secondary-bg: var(--tg-theme-secondary-bg-color, #2c2c2e);
+                --danger-bg: rgba(255, 59, 48, 0.12);
+                --card-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+                --divider: rgba(255, 255, 255, 0.08);
+            }
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -21,121 +37,228 @@
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            padding-top: 56px;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding-top: 52px;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        .tabs-container {
-            position: fixed; top: 0; left: 0; right: 0;
-            background: var(--bg);
+        /* --- Header / Tabs --- */
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
             z-index: 100;
-            border-bottom: 1px solid var(--secondary-bg);
+            background: var(--bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .tabs-scroll {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            padding: 10px 12px;
+            padding: 10px 16px 10px;
             display: flex;
             gap: 8px;
-            white-space: nowrap;
+            scrollbar-width: none;
+            border-bottom: 1px solid var(--divider);
         }
-        .tabs-container::-webkit-scrollbar { display: none; }
+        .tabs-scroll::-webkit-scrollbar { display: none; }
 
         .tab {
-            padding: 7px 14px;
-            border-radius: 18px;
+            flex-shrink: 0;
+            padding: 6px 14px;
+            border-radius: 100px;
             background: var(--secondary-bg);
-            color: var(--text);
+            color: var(--hint);
             font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            border: none;
+            outline: none;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
+        .tab:active { transform: scale(0.96); }
         .tab.active {
             background: var(--btn);
             color: var(--btn-txt);
         }
-        .tab .count {
+
+        .tab-count {
             font-size: 11px;
-            opacity: 0.7;
-            margin-left: 3px;
+            font-weight: 600;
+            opacity: 0.6;
+        }
+        .tab.active .tab-count { opacity: 0.85; }
+
+        /* --- Content --- */
+        .content {
+            padding: 12px 16px 32px;
+            max-width: 640px;
+            margin: 0 auto;
         }
 
-        .alert-list { padding: 10px; padding-bottom: 40px; }
-
+        /* --- Alert Cards --- */
         .alert-card {
-            background: var(--bg);
-            border: 1px solid var(--secondary-bg);
-            border-radius: 12px;
-            padding: 14px;
+            background: var(--secondary-bg);
+            border-radius: 14px;
+            padding: 14px 16px;
             margin-bottom: 10px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            gap: 12px;
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+        .alert-card.removing {
+            opacity: 0;
+            transform: translateX(40px);
         }
 
-        .alert-info { flex: 1; margin-right: 12px; }
+        .alert-icon-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            background: var(--bg);
+        }
+
+        .alert-body {
+            flex: 1;
+            min-width: 0;
+        }
 
         .alert-title {
             font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 2px;
+            font-size: 15px;
+            line-height: 1.3;
+            color: var(--text);
         }
 
         .alert-detail {
             font-size: 13px;
             color: var(--hint);
-            line-height: 1.4;
+            line-height: 1.35;
+            margin-top: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .btn-delete {
-            background: transparent;
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            border: none;
+            background: var(--danger-bg);
             color: var(--danger);
-            border: 1px solid var(--danger);
-            padding: 7px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
             cursor: pointer;
-            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
         }
-        .btn-delete:active { opacity: 0.6; }
-        .btn-delete:disabled { opacity: 0.4; cursor: default; }
+        .btn-delete:active { transform: scale(0.9); }
+        .btn-delete:disabled { opacity: 0.35; cursor: default; transform: none; }
 
-        .empty {
+        .btn-delete svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* --- Empty State --- */
+        .empty-state {
             text-align: center;
-            padding: 40px;
+            padding: 60px 24px;
             color: var(--hint);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.4;
+        }
+
+        .empty-title {
+            font-size: 17px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .empty-subtitle {
             font-size: 14px;
+            line-height: 1.4;
+        }
+
+        /* --- Summary bar --- */
+        .summary-bar {
+            padding: 0 16px 8px;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        .summary-text {
+            font-size: 12px;
+            color: var(--hint);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* --- Responsive --- */
+        @media (min-width: 480px) {
+            .alert-card { padding: 16px 18px; }
+            .alert-title { font-size: 16px; }
+            .alert-detail { font-size: 14px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="tabs-container" id="tabs"></div>
-    <div id="content" class="alert-list"></div>
+    <div class="header">
+        <div class="tabs-scroll" id="tabs"></div>
+    </div>
+
+    <div class="summary-bar" id="summary"></div>
+    <div class="content" id="content"></div>
 
     <script>
         const tg = window.Telegram?.WebApp || {
             expand: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
             close: () => console.log('Would close'),
-            initDataUnsafe: {}
+            initDataUnsafe: {},
+            themeParams: {}
         };
         tg.expand();
         tg.MainButton.hide();
 
         const ALERT_TYPES = [
-            { id: -1, label: "All" },
-            { id: 9, label: "New Trade" },
-            { id: 1, label: "Token Price" },
-            { id: 2, label: "Liquidation" },
-            { id: 3, label: "Open Interest" },
-            { id: 4, label: "Funding Rate" },
-            { id: 5, label: "Volume" },
-            { id: 6, label: "Surge" },
-            { id: 8, label: "Direction" },
-            { id: 0, label: "New Token" },
+            { id: -1, label: "All",            icon: "" },
+            { id: 9,  label: "New Trade",      icon: "📊" },
+            { id: 1,  label: "Token Price",    icon: "💵" },
+            { id: 2,  label: "Liquidation",    icon: "⚡" },
+            { id: 3,  label: "Open Interest",  icon: "📈" },
+            { id: 4,  label: "Funding Rate",   icon: "💰" },
+            { id: 5,  label: "Volume",         icon: "📊" },
+            { id: 6,  label: "Surge",          icon: "🚀" },
+            { id: 8,  label: "Direction",       icon: "🎯" },
+            { id: 0,  label: "New Token",      icon: "✨" },
         ];
+
+        const ICON_MAP = {};
+        ALERT_TYPES.forEach(t => ICON_MAP[t.id] = t.icon);
 
         let allAlerts = [];
         let currentKind = -1;
@@ -145,8 +268,7 @@
                 const params = new URLSearchParams(window.location.search);
                 const encoded = params.get('d');
                 if (!encoded) return [];
-                const json = atob(encoded);
-                return JSON.parse(json);
+                return JSON.parse(atob(encoded));
             } catch (e) {
                 console.error('Failed to parse alerts:', e);
                 return [];
@@ -161,13 +283,13 @@
         function renderTabs() {
             const container = document.getElementById('tabs');
             container.innerHTML = ALERT_TYPES
-                .filter(type => type.id === -1 || countByKind(type.id) > 0)
-                .map(type => {
-                    const count = countByKind(type.id);
-                    return `<div class="tab ${type.id === currentKind ? 'active' : ''}"
-                         onclick="switchTab(${type.id})">
-                        ${type.label}<span class="count">(${count})</span>
-                    </div>`;
+                .filter(t => t.id === -1 || countByKind(t.id) > 0)
+                .map(t => {
+                    const count = countByKind(t.id);
+                    return `<button class="tab ${t.id === currentKind ? 'active' : ''}"
+                                onclick="switchTab(${t.id})">
+                        ${t.label}<span class="tab-count">${count}</span>
+                    </button>`;
                 }).join('');
         }
 
@@ -186,79 +308,102 @@
                     return { title: "New Token", detail: "Notify on new token listings" };
                 case 1: {
                     const dir = alert.direction === 1 ? "above" : "below";
-                    const price = alert.target_price || 0;
-                    return { title: `Token Price`, detail: `${dir} $${price}` };
+                    return { title: "Token Price", detail: `${dir} $${alert.target_price || 0}` };
                 }
                 case 2: {
-                    const addr = ex.address ? `${ex.address.substring(0, 10)}...` : "";
-                    const tokens = ex.tokens ? ex.tokens.join(', ') : "Any";
-                    const sz = ex.minimum_sz ? ` min $${(ex.minimum_sz / 1000).toFixed(0)}k` : "";
-                    return { title: "Liquidation", detail: `${addr ? addr + ' ' : ''}${tokens}${sz}` };
+                    const parts = [];
+                    if (ex.address) parts.push(ex.address.substring(0, 10) + '...');
+                    if (ex.tokens?.length) parts.push(ex.tokens.join(', '));
+                    if (ex.minimum_sz) parts.push(`min $${(ex.minimum_sz / 1000).toFixed(0)}k`);
+                    return { title: "Liquidation", detail: parts.join(' · ') || 'Any' };
                 }
                 case 3:
                     return { title: `OI: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
                 case 4:
                     return { title: `FR: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
                 case 5:
-                    return { title: `Volume: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
+                    return { title: `Vol: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
                 case 6:
                     return { title: `Surge: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
                 case 8: {
-                    const addr = ex.address ? `${ex.address.substring(0, 10)}...` : "";
-                    const tokens = ex.tokens ? ex.tokens.join(', ') : "ALL";
-                    return { title: "Trade Direction", detail: `${addr} ${tokens}` };
+                    const addr = ex.address ? ex.address.substring(0, 10) + '...' : '';
+                    const tokens = ex.tokens ? ex.tokens.join(', ') : 'ALL';
+                    return { title: "Trade Direction", detail: `${addr} · ${tokens}` };
                 }
                 case 9: {
-                    const addr = ex.address || "";
+                    const addr = ex.address || '';
                     const name = ex.name;
-                    const display = name ? `${name} (${addr.substring(0, 10)}...)` : `${addr.substring(0, 10)}...`;
-                    return { title: "New Trade", detail: display };
+                    return {
+                        title: name || 'New Trade',
+                        detail: name ? addr : (addr ? addr.substring(0, 16) + '...' : '')
+                    };
                 }
                 default:
-                    return { title: `Alert (kind ${k})`, detail: JSON.stringify(ex).substring(0, 60) };
+                    return { title: `Alert`, detail: `kind ${k}` };
             }
         }
 
         function renderAlerts() {
             const content = document.getElementById('content');
+            const summary = document.getElementById('summary');
             const filtered = currentKind === -1
                 ? allAlerts
                 : allAlerts.filter(a => a.kind === currentKind);
 
+            const kindLabel = ALERT_TYPES.find(t => t.id === currentKind)?.label || 'All';
+            summary.innerHTML = `<div class="summary-text">${filtered.length} alert${filtered.length !== 1 ? 's' : ''}${currentKind !== -1 ? ' in ' + kindLabel : ''}</div>`;
+
             if (!filtered.length) {
-                content.innerHTML = '<div class="empty">No alerts in this category.</div>';
+                content.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔔</div>
+                        <div class="empty-title">No alerts yet</div>
+                        <div class="empty-subtitle">Alerts you create will appear here</div>
+                    </div>`;
                 return;
             }
 
             content.innerHTML = filtered.map(alert => {
                 const { title, detail } = formatAlert(alert);
+                const icon = ICON_MAP[alert.kind] || '🔔';
                 return `
                 <div class="alert-card" id="card-${alert.id}">
-                    <div class="alert-info">
+                    <div class="alert-icon-badge">${icon}</div>
+                    <div class="alert-body">
                         <div class="alert-title">${title}</div>
                         <div class="alert-detail">${detail}</div>
                     </div>
-                    <button class="btn-delete" onclick="deleteAlert(${alert.id}, this)">Delete</button>
+                    <button class="btn-delete" onclick="deleteAlert(${alert.id}, this)" aria-label="Delete alert">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+                            <path d="M10 11v6"></path>
+                            <path d="M14 11v6"></path>
+                        </svg>
+                    </button>
                 </div>`;
             }).join('');
         }
 
         function deleteAlert(alertId, btn) {
             if (!confirm('Delete this alert?')) return;
-            btn.disabled = true;
-            btn.textContent = 'Deleting...';
 
-            try {
-                const jsonData = JSON.stringify({
-                    type: "delete_alert",
-                    data: { id: alertId }
-                });
-                tg.sendData(jsonData);
-            } catch (e) {
-                console.error('Error sending data:', e);
-                btn.disabled = false;
-                btn.textContent = 'Delete';
-            }
+            btn.disabled = true;
+            const card = document.getElementById(`card-${alertId}`);
+            if (card) card.classList.add('removing');
+
+            setTimeout(() => {
+                try {
+                    tg.sendData(JSON.stringify({
+                        type: "delete_alert",
+                        data: { id: alertId }
+                    }));
+                } catch (e) {
+                    console.error('Error sending data:', e);
+                    if (card) card.classList.remove('removing');
+                    btn.disabled = false;
+                }
+            }, 250);
         }
 
         // Init
