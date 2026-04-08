@@ -118,14 +118,24 @@
             
             <div class="form-group">
                 <label for="address">Wallet Address</label>
-                <input 
-                    type="text" 
-                    id="address" 
-                    name="address" 
+                <input
+                    type="text"
+                    id="address"
+                    name="address"
                     placeholder="Enter wallet address (0x...)"
                     required
                 >
                 <div class="error-message" id="addressError"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="name">Name (optional)</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    placeholder="Give this address a name"
+                >
             </div>
 
             <button type="submit" class="submit-btn" id="submitBtn">Save Alert</button>
@@ -145,6 +155,7 @@
         // Elements
         const form = document.getElementById('configForm');
         const addressInput = document.getElementById('address');
+        const nameInput = document.getElementById('name');
         const addressError = document.getElementById('addressError');
 
         function validateForm() {
@@ -174,6 +185,11 @@
             const formData = {
                 address: addressInput.value.trim()
             };
+
+            const nameValue = nameInput.value.trim();
+            if (nameValue) {
+                formData.name = nameValue;
+            }
 
             try {
                 const jsonData = JSON.stringify({
