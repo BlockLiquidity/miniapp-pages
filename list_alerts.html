@@ -189,8 +189,8 @@
             { id: 0, label: "New Token" },
         ];
 
-        let currentKind = 1; 
-        let pathUserId = null; 
+        let currentKind = 1;
+        let pathUserId = null;
 
         // --- TABS LOGIC ---
         function renderTabs() {
@@ -371,9 +371,10 @@
                 const addr = ex.address ? `${ex.address.substring(0,6)}...` : "Address";
                 return `Track Trade Direction on target address: <b>${addr}</b>`
             }
-            if (k === 9) { 
+            if (k === 9) {
                 const addr = ex.address ? `${ex.address.substring(0,6)}...` : "Address";
-                return `New Trade by <b>${addr}</b>`;
+                const name = ex.name ? `<b>${ex.name}</b> (${addr})` : `<b>${addr}</b>`;
+                return `New Trade by ${name}`;
             }
             if (k === 0) return `Notify for new tokens`;
             return "Custom Alert Notification";

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Manage Alerts</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: var(--tg-theme-bg-color, #fff);
+            --text: var(--tg-theme-text-color, #000);
+            --hint: var(--tg-theme-hint-color, #888);
+            --btn: var(--tg-theme-button-color, #3390ec);
+            --btn-txt: var(--tg-theme-button-text-color, #fff);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #f1f1f1);
+            --danger: #ff3b30;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            padding-top: 56px;
+        }
+
+        .tabs-container {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: var(--bg);
+            z-index: 100;
+            border-bottom: 1px solid var(--secondary-bg);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 10px 12px;
+            display: flex;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        .tabs-container::-webkit-scrollbar { display: none; }
+
+        .tab {
+            padding: 7px 14px;
+            border-radius: 18px;
+            background: var(--secondary-bg);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: var(--btn);
+            color: var(--btn-txt);
+        }
+        .tab .count {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-left: 3px;
+        }
+
+        .alert-list { padding: 10px; padding-bottom: 40px; }
+
+        .alert-card {
+            background: var(--bg);
+            border: 1px solid var(--secondary-bg);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .alert-info { flex: 1; margin-right: 12px; }
+
+        .alert-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .alert-detail {
+            font-size: 13px;
+            color: var(--hint);
+            line-height: 1.4;
+        }
+
+        .btn-delete {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 7px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-delete:active { opacity: 0.6; }
+        .btn-delete:disabled { opacity: 0.4; cursor: default; }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--hint);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="tabs-container" id="tabs"></div>
+    <div id="content" class="alert-list"></div>
+
+    <script>
+        const tg = window.Telegram?.WebApp || {
+            expand: () => {},
+            sendData: (data) => console.log('Would send to Telegram:', data),
+            close: () => console.log('Would close'),
+            initDataUnsafe: {}
+        };
+        tg.expand();
+        tg.MainButton.hide();
+
+        const ALERT_TYPES = [
+            { id: -1, label: "All" },
+            { id: 9, label: "New Trade" },
+            { id: 1, label: "Token Price" },
+            { id: 2, label: "Liquidation" },
+            { id: 3, label: "Open Interest" },
+            { id: 4, label: "Funding Rate" },
+            { id: 5, label: "Volume" },
+            { id: 6, label: "Surge" },
+            { id: 8, label: "Direction" },
+            { id: 0, label: "New Token" },
+        ];
+
+        let allAlerts = [];
+        let currentKind = -1;
+
+        function getAlerts() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const encoded = params.get('d');
+                if (!encoded) return [];
+                const json = atob(encoded);
+                return JSON.parse(json);
+            } catch (e) {
+                console.error('Failed to parse alerts:', e);
+                return [];
+            }
+        }
+
+        function countByKind(kind) {
+            if (kind === -1) return allAlerts.length;
+            return allAlerts.filter(a => a.kind === kind).length;
+        }
+
+        function renderTabs() {
+            const container = document.getElementById('tabs');
+            container.innerHTML = ALERT_TYPES
+                .filter(type => type.id === -1 || countByKind(type.id) > 0)
+                .map(type => {
+                    const count = countByKind(type.id);
+                    return `<div class="tab ${type.id === currentKind ? 'active' : ''}"
+                         onclick="switchTab(${type.id})">
+                        ${type.label}<span class="count">(${count})</span>
+                    </div>`;
+                }).join('');
+        }
+
+        function switchTab(kindId) {
+            currentKind = kindId;
+            renderTabs();
+            renderAlerts();
+        }
+
+        function formatAlert(alert) {
+            const k = alert.kind;
+            const ex = alert.extra || {};
+
+            switch (k) {
+                case 0:
+                    return { title: "New Token", detail: "Notify on new token listings" };
+                case 1: {
+                    const dir = alert.direction === 1 ? "above" : "below";
+                    const price = alert.target_price || 0;
+                    return { title: `Token Price`, detail: `${dir} $${price}` };
+                }
+                case 2: {
+                    const addr = ex.address ? `${ex.address.substring(0, 10)}...` : "";
+                    const tokens = ex.tokens ? ex.tokens.join(', ') : "Any";
+                    const sz = ex.minimum_sz ? ` min $${(ex.minimum_sz / 1000).toFixed(0)}k` : "";
+                    return { title: "Liquidation", detail: `${addr ? addr + ' ' : ''}${tokens}${sz}` };
+                }
+                case 3:
+                    return { title: `OI: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
+                case 4:
+                    return { title: `FR: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
+                case 5:
+                    return { title: `Volume: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
+                case 6:
+                    return { title: `Surge: ${ex.token || ''}`, detail: `${ex.threshold || 0}% threshold` };
+                case 8: {
+                    const addr = ex.address ? `${ex.address.substring(0, 10)}...` : "";
+                    const tokens = ex.tokens ? ex.tokens.join(', ') : "ALL";
+                    return { title: "Trade Direction", detail: `${addr} ${tokens}` };
+                }
+                case 9: {
+                    const addr = ex.address || "";
+                    const name = ex.name;
+                    const display = name ? `${name} (${addr.substring(0, 10)}...)` : `${addr.substring(0, 10)}...`;
+                    return { title: "New Trade", detail: display };
+                }
+                default:
+                    return { title: `Alert (kind ${k})`, detail: JSON.stringify(ex).substring(0, 60) };
+            }
+        }
+
+        function renderAlerts() {
+            const content = document.getElementById('content');
+            const filtered = currentKind === -1
+                ? allAlerts
+                : allAlerts.filter(a => a.kind === currentKind);
+
+            if (!filtered.length) {
+                content.innerHTML = '<div class="empty">No alerts in this category.</div>';
+                return;
+            }
+
+            content.innerHTML = filtered.map(alert => {
+                const { title, detail } = formatAlert(alert);
+                return `
+                <div class="alert-card" id="card-${alert.id}">
+                    <div class="alert-info">
+                        <div class="alert-title">${title}</div>
+                        <div class="alert-detail">${detail}</div>
+                    </div>
+                    <button class="btn-delete" onclick="deleteAlert(${alert.id}, this)">Delete</button>
+                </div>`;
+            }).join('');
+        }
+
+        function deleteAlert(alertId, btn) {
+            if (!confirm('Delete this alert?')) return;
+            btn.disabled = true;
+            btn.textContent = 'Deleting...';
+
+            try {
+                const jsonData = JSON.stringify({
+                    type: "delete_alert",
+                    data: { id: alertId }
+                });
+                tg.sendData(jsonData);
+            } catch (e) {
+                console.error('Error sending data:', e);
+                btn.disabled = false;
+                btn.textContent = 'Delete';
+            }
+        }
+
+        // Init
+        allAlerts = getAlerts();
+        renderTabs();
+        renderAlerts();
+    </script>
+</body>
+</html>
