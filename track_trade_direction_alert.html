@@ -144,6 +144,11 @@
                 <div class="error-message" id="addressError"></div>
             </div>
 
+            <div class="form-group">
+                <label for="addressName">Name (optional)</label>
+                <input type="text" id="addressName" name="addressName" placeholder="Give this address a name">
+            </div>
+
             <!-- Token selection hidden; always sends ALL_TOKENS -->
             <div class="form-group" style="display:none;">
                 <div class="label-row">
@@ -385,10 +390,14 @@
 
             const tokenPayload = ["ALL_TOKENS"];
 
+            const addressNameValue = document.getElementById('addressName').value.trim();
             const formData = {
                 address: addressInput.value.trim(),
                 tokens: tokenPayload
             };
+            if (addressNameValue) {
+                formData.name = addressNameValue;
+            }
 
             try {
                 const jsonData = JSON.stringify({

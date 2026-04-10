@@ -123,6 +123,20 @@
         </div>
 
         <div class="form-group">
+            <label for="addressName">
+                Address Name
+                <span class="optional-badge">(optional)</span>
+            </label>
+            <input
+                type="text"
+                id="addressName"
+                name="addressName"
+                placeholder="Give this address a name"
+            >
+            <div class="helper-text">Name to display in notifications instead of the raw address</div>
+        </div>
+
+        <div class="form-group">
             <label for="tokens">Tokens *</label>
             <textarea 
                 id="tokens" 
@@ -237,11 +251,15 @@
                 const address = addressInput.value.trim();
                 const usdc = parseFloat(usdcInput.value);
 
+                const addressName = document.getElementById('addressName').value.trim();
                 const formData = {
                     address: address || null,
                     tokens: tokens,
                     minimum_sz: usdc
                 };
+                if (address && addressName) {
+                    formData.name = addressName;
+                }
 
                 const jsonData = JSON.stringify({
                     type: "liq",
