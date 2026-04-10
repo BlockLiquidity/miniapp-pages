@@ -178,7 +178,7 @@
                 <div class="alert-description">Track specific wallet trading activities</div>
             </a>
 
-            <a href="new_token_alert.html" class="alert-card">
+            <a id="new-token-alert-link" href="new_token_alert.html" class="alert-card">
                 <div class="alert-card-header">
                     <span class="alert-icon">✨</span>
                     <span class="alert-title">New Token Alert</span>
@@ -198,11 +198,21 @@
         if (tg) {
             tg.expand();
             tg.MainButton.hide();
-            
+
             // Apply theme colors
             if (tg.themeParams) {
                 document.body.style.backgroundColor = tg.themeParams.bg_color || '#ffffff';
                 document.body.style.color = tg.themeParams.text_color || '#000000';
+            }
+        }
+
+        // Forward new token subscription status to the new_token_alert page
+        const params = new URLSearchParams(window.location.search);
+        const nts = params.get('nts');
+        if (nts !== null) {
+            const link = document.getElementById('new-token-alert-link');
+            if (link) {
+                link.href = `new_token_alert.html?nts=${nts}`;
             }
         }
     </script>

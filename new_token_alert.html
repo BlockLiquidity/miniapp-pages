@@ -75,8 +75,7 @@
         <h1>New Token Alert</h1>
         <p class="description">Get notified whenever a new token is listed on Hyperliquid.</p>
 
-        <button class="submit-btn" onclick="subscribe()">Subscribe</button>
-        <button class="unsub-btn" onclick="unsubscribe()">Unsubscribe</button>
+        <button id="toggle-btn" class="submit-btn" disabled onclick="toggleSubscription()">Loading...</button>
     </div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -84,17 +83,31 @@
         const tg = window.Telegram?.WebApp || {
             expand: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
+            initData: '',
             initDataUnsafe: {}
         };
         tg.expand();
         tg.MainButton.hide();
 
-        function subscribe() {
-            tg.sendData(JSON.stringify({ type: "sub_new_token", data: {} }));
-        }
+        const params = new URLSearchParams(window.location.search);
+        const isSubscribed = params.get('nts') === '1';
 
-        function unsubscribe() {
-            tg.sendData(JSON.stringify({ type: "unsub_new_token", data: {} }));
+        const btn = document.getElementById('toggle-btn');
+        if (isSubscribed) {
+            btn.textContent = 'Unsubscribe';
+            btn.className = 'unsub-btn';
+        } else {
+            btn.textContent = 'Subscribe';
+            btn.className = 'submit-btn';
+        }
+        btn.disabled = false;
+
+        function toggleSubscription() {
+            if (isSubscribed) {
+                tg.sendData(JSON.stringify({ type: "unsub_new_token", data: {} }));
+            } else {
+                tg.sendData(JSON.stringify({ type: "sub_new_token", data: {} }));
+            }
         }
     </script>
 </body>
