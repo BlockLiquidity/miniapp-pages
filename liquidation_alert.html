@@ -732,13 +732,18 @@
         // ============================================================
         // Telegram setup
         // ============================================================
-        const tg = window.Telegram?.WebApp || {
+        const _realTg = window.Telegram?.WebApp;
+        const tg = _realTg || {
             ready: () => {},
             expand: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
             initDataUnsafe: {},
             BackButton: { show: () => {}, hide: () => {}, onClick: () => {}, offClick: () => {} }
         };
+        // True only when running outside Telegram (no real SDK present).
+        // Do NOT use tg.initDataUnsafe.user for this — that field can be
+        // absent even in a real Telegram session (e.g. Menu Button launch).
+        const isDevMode = !_realTg;
         tg.ready();
         tg.expand();
         if (tg.MainButton) tg.MainButton.hide();
@@ -1212,10 +1217,10 @@
             });
 
             // Outside Telegram (dev / browser preview): show confirmation and log.
-            if (!tg.initDataUnsafe?.user) {
+            if (isDevMode) {
                 console.log('OUTPUT DATA:', jsonData);
                 const tokenSummary = tokens === 'ALL_TOKEN' ? 'all tokens' : `${tokens.length} token(s)`;
-                alert(`Alert saved! Watching ${tokenSummary}, min $${minimum_sz.toLocaleString()}.`);
+                alert(`[Dev mode] Alert saved! Watching ${tokenSummary}, min $${minimum_sz.toLocaleString()}.`);
                 return;
             }
 
