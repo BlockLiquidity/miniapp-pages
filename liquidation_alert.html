@@ -720,7 +720,7 @@
                 <input type="hidden" id="hiddenSize" name="size">
             </form>
 
-            <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">Set Alert</button>
+            <button type="button" class="submit-btn" id="submitBtn">Set Alert</button>
             <button type="button" class="submit-back-btn" onclick="goBack()">Go Back</button>
         </div>
 
@@ -732,21 +732,14 @@
         // ============================================================
         // Telegram setup
         // ============================================================
-        const _realTg = window.Telegram?.WebApp;
-        const tg = _realTg || {
-            ready: () => {},
+        const tg = window.Telegram?.WebApp || {
             expand: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
             initDataUnsafe: {},
             BackButton: { show: () => {}, hide: () => {}, onClick: () => {}, offClick: () => {} }
         };
-        // True only when running outside Telegram (no real SDK present).
-        // Do NOT use tg.initDataUnsafe.user for this — that field can be
-        // absent even in a real Telegram session (e.g. Menu Button launch).
-        const isDevMode = !_realTg;
-        tg.ready();
         tg.expand();
-        if (tg.MainButton) tg.MainButton.hide();
+        tg.MainButton.hide();
 
         // ============================================================
         // Native Telegram BackButton integration
@@ -1192,7 +1185,7 @@
         // ============================================================
         // Submit
         // ============================================================
-        window.submitForm = function() {
+        function submitForm() {
             const tokens = resolvedTokens();
             const minimum_sz = resolvedSize();
             const address = wizard.addressChoice === 'all' ? '' : wizard.address;
@@ -1216,19 +1209,16 @@
                 data: formData
             });
 
-            // Outside Telegram (dev / browser preview): show confirmation and log.
-            if (isDevMode) {
-                console.log('OUTPUT DATA:', jsonData);
-                const tokenSummary = tokens === 'ALL_TOKEN' ? 'all tokens' : `${tokens.length} token(s)`;
-                alert(`[Dev mode] Alert saved! Watching ${tokenSummary}, min $${minimum_sz.toLocaleString()}.`);
-                return;
-            }
-
             try {
                 tg.sendData(jsonData);
+
+                if (!tg.initDataUnsafe.user) {
+                    console.log('OUTPUT DATA:', jsonData);
+                    const tokenSummary = tokens === 'ALL_TOKEN' ? 'all tokens' : `${tokens.length} token(s)`;
+                    alert(`Alert saved! Watching ${tokenSummary}, min $${minimum_sz.toLocaleString()}.`);
+                }
             } catch (error) {
                 console.error('Error sending data:', error);
-                alert('Failed to save alert. Please close and reopen this screen from the bot.');
             }
         };
 
@@ -1398,6 +1388,10 @@
         syncBackButton();
         // Pre-fetch tokens in the background so step 3 loads instantly
         fetchTokens();
+
+        // Wire submit button via addEventListener (matching the pattern used by
+        // all other working alert pages: price_surge, volume, funding_rate, etc.)
+        document.getElementById('submitBtn').addEventListener('click', submitForm);
     </script>
 </body>
 </html>
