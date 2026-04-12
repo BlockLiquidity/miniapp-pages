@@ -717,10 +717,12 @@
         // Telegram setup
         // ============================================================
         const tg = window.Telegram?.WebApp || {
+            ready: () => {},
             expand: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
             initDataUnsafe: {}
         };
+        tg.ready();
         tg.expand();
         if (tg.MainButton) tg.MainButton.hide();
 
@@ -1077,11 +1079,8 @@
 
         function resolvedTokens() {
             if (wizard.tokenChoice === 'all') {
-                // Return the full token list. If tokens haven't loaded yet (edge case),
-                // return an empty array — the backend should interpret that as "all".
-                // NOTE: If the backend does NOT support an empty array as "all tokens",
-                // this should be flagged for the telegram-developer agent to handle.
-                return tokenState.allTokens.length > 0 ? tokenState.allTokens : [];
+                // Sentinel string understood by the backend as "monitor all tokens".
+                return 'ALL_TOKEN';
             }
             return Array.from(tokenState.selectedTokens);
         }
@@ -1105,7 +1104,7 @@
             // Tokens
             const tokens = resolvedTokens();
             if (wizard.tokenChoice === 'all') {
-                items.push({ label: 'Tokens', value: `All tokens (${tokenState.allTokens.length} markets)` });
+                items.push({ label: 'Tokens', value: 'All tokens' });
             } else {
                 const n = tokens.length;
                 items.push({
@@ -1152,20 +1151,24 @@
                 minimum_sz
             };
 
+            const jsonData = JSON.stringify({
+                type: 'liq',
+                data: formData
+            });
+
+            // Outside Telegram (dev / browser preview): show confirmation and log.
+            if (!tg.initDataUnsafe?.user) {
+                console.log('OUTPUT DATA:', jsonData);
+                const tokenSummary = tokens === 'ALL_TOKEN' ? 'all tokens' : `${tokens.length} token(s)`;
+                alert(`Alert saved! Watching ${tokenSummary}, min $${minimum_sz.toLocaleString()}.`);
+                return;
+            }
+
             try {
-                const jsonData = JSON.stringify({
-                    type: 'liq',
-                    data: formData
-                });
-
                 tg.sendData(jsonData);
-
-                if (!tg.initDataUnsafe?.user) {
-                    console.log('OUTPUT DATA:', jsonData);
-                    alert(`Alert saved! ${tokens.length} token(s), min $${minimum_sz.toLocaleString()}.`);
-                }
             } catch (error) {
                 console.error('Error sending data:', error);
+                alert('Failed to save alert. Please close and reopen this screen from the bot.');
             }
         };
 
