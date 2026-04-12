@@ -510,11 +510,27 @@
             color: var(--tg-theme-hint-color, var(--hint-color));
             margin-top: 4px;
         }
+
+        /* Dev/browser fallback back link — hidden by JS when inside Telegram */
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            color: var(--tg-theme-button-color, var(--button-color));
+            text-decoration: none;
+            font-size: 16px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .back-button:hover { opacity: 0.8; }
     </style>
 </head>
 
 <body>
     <div class="container">
+
+        <!-- Dev/browser fallback back button — hidden inside Telegram via JS -->
+        <a href="index.html" class="back-button" id="devBackBtn">&larr; Back to Home</a>
 
         <!-- Header -->
         <div class="wizard-header">
@@ -720,11 +736,45 @@
             ready: () => {},
             expand: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
-            initDataUnsafe: {}
+            initDataUnsafe: {},
+            BackButton: { show: () => {}, hide: () => {}, onClick: () => {}, offClick: () => {} }
         };
         tg.ready();
         tg.expand();
         if (tg.MainButton) tg.MainButton.hide();
+
+        // ============================================================
+        // Native Telegram BackButton integration
+        // ============================================================
+        // When running inside Telegram, use the native chrome back button.
+        // On step 1 (first wizard step) it exits to index.html.
+        // On steps 2–5 it steps backward through the wizard, same as the
+        // in-page "Back" buttons already present.
+        //
+        // When NOT inside Telegram (dev/browser) the native BackButton is a
+        // no-op stub, so we fall back to a visible HTML link (see #devBackBtn).
+        const hasTgBackButton = !!(window.Telegram?.WebApp?.BackButton);
+
+        function handleNativeBack() {
+            const seq = getStepSequence();
+            const currentIdx = seq.indexOf(wizard.currentStep);
+            if (currentIdx <= 0) {
+                // First step — exit the wizard and return to the index page.
+                window.location.href = 'index.html';
+            } else {
+                goBack();
+            }
+        }
+
+        function syncBackButton() {
+            if (!hasTgBackButton) return;
+            // Always show the BackButton — it either steps back or exits to index.
+            tg.BackButton.show();
+        }
+
+        if (hasTgBackButton) {
+            tg.BackButton.onClick(handleNativeBack);
+        }
 
         // ============================================================
         // Wizard state
@@ -864,6 +914,11 @@
             wizard.currentStep = stepNum;
             renderProgress();
             renderCompletedSteps();
+
+            // Keep the native Telegram BackButton active on every step.
+            // Its handler (handleNativeBack) checks wizard.currentStep at
+            // call time, so no per-step wiring is needed here.
+            syncBackButton();
 
             // Step-specific setup
             if (stepNum === 3) {
@@ -1327,7 +1382,15 @@
         // ============================================================
         // Boot
         // ============================================================
+        // Hide the HTML fallback back link when running inside Telegram —
+        // the native BackButton takes over in that environment.
+        if (hasTgBackButton) {
+            const devBtn = document.getElementById('devBackBtn');
+            if (devBtn) devBtn.style.display = 'none';
+        }
+
         renderProgress();
+        syncBackButton();
         // Pre-fetch tokens in the background so step 3 loads instantly
         fetchTokens();
     </script>
