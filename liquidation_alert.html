@@ -8,7 +8,6 @@
     <style>
         /* --- THEME SETUP --- */
         :root {
-            /* Default Light Mode Colors */
             --bg-color: #ffffff;
             --text-color: #000000;
             --secondary-bg-color: #f0f0f0;
@@ -18,12 +17,11 @@
             --danger-color: #ff3b30;
         }
 
-        /* System Dark Mode Overrides */
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg-color: #1c1c1e; /* Dark Gray/Black */
+                --bg-color: #1c1c1e;
                 --text-color: #ffffff;
-                --secondary-bg-color: #2c2c2e; /* Slightly lighter for inputs */
+                --secondary-bg-color: #2c2c2e;
                 --hint-color: #8e8e93;
                 --button-color: #0088cc;
                 --button-text-color: #ffffff;
@@ -39,7 +37,6 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            /* Use Telegram var if available, otherwise use system adaptive var */
             background-color: var(--tg-theme-bg-color, var(--bg-color));
             color: var(--tg-theme-text-color, var(--text-color));
             padding: 16px;
@@ -50,22 +47,209 @@
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding-bottom: 40px;
+            padding-bottom: 60px;
         }
 
-        h1 {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 24px;
+        /* ---- Wizard Header ---- */
+        .wizard-header {
+            margin-bottom: 28px;
+        }
+
+        .wizard-title {
+            font-size: 22px;
+            font-weight: 700;
             color: var(--tg-theme-text-color, var(--text-color));
+            margin-bottom: 4px;
         }
 
-        .form-group {
-            margin-bottom: 24px;
-            position: relative;
+        .wizard-progress {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
         }
 
-        /* Label Row for aligning Label and Select All button */
+        .progress-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--tg-theme-hint-color, var(--hint-color));
+            opacity: 0.35;
+            transition: opacity 0.25s, background-color 0.25s;
+        }
+
+        .progress-dot.active {
+            background-color: var(--tg-theme-button-color, var(--button-color));
+            opacity: 1;
+        }
+
+        .progress-dot.done {
+            background-color: var(--tg-theme-button-color, var(--button-color));
+            opacity: 0.45;
+        }
+
+        /* ---- Completed step summary rows ---- */
+        .completed-steps {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .summary-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg-color));
+            cursor: pointer;
+            user-select: none;
+            transition: opacity 0.2s;
+        }
+
+        .summary-row:active {
+            opacity: 0.75;
+        }
+
+        .summary-row-left {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            min-width: 0;
+        }
+
+        .summary-row-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--tg-theme-hint-color, var(--hint-color));
+        }
+
+        .summary-row-value {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--tg-theme-text-color, var(--text-color));
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 260px;
+        }
+
+        .summary-row-edit {
+            font-size: 13px;
+            color: var(--tg-theme-button-color, var(--button-color));
+            font-weight: 500;
+            flex-shrink: 0;
+            margin-left: 12px;
+        }
+
+        /* ---- Step Card ---- */
+        .step-card {
+            display: none;
+        }
+
+        .step-card.active {
+            display: block;
+        }
+
+        .step-question {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, var(--text-color));
+            margin-bottom: 8px;
+            line-height: 1.35;
+        }
+
+        .step-hint {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, var(--hint-color));
+            margin-bottom: 20px;
+            line-height: 1.55;
+        }
+
+        /* ---- Choice Buttons ---- */
+        .choice-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .choice-btn {
+            width: 100%;
+            padding: 14px 18px;
+            font-size: 15px;
+            font-weight: 500;
+            text-align: left;
+            border: 2px solid var(--tg-theme-hint-color, var(--hint-color));
+            border-radius: 12px;
+            background-color: transparent;
+            color: var(--tg-theme-text-color, var(--text-color));
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .choice-btn.selected {
+            border-color: var(--tg-theme-button-color, var(--button-color));
+            background-color: rgba(0, 136, 204, 0.10); /* fallback tint matching --button-color */
+        }
+
+        .choice-btn .choice-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 28px;
+            text-align: center;
+        }
+
+        .choice-btn .choice-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .choice-btn .choice-title {
+            font-weight: 600;
+        }
+
+        .choice-btn .choice-desc {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, var(--hint-color));
+            font-weight: 400;
+        }
+
+        /* ---- Inline input after a choice ---- */
+        .inline-input-group {
+            margin-top: 14px;
+            display: none;
+        }
+
+        .inline-input-group.show {
+            display: block;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 1px solid var(--tg-theme-hint-color, var(--hint-color));
+            border-radius: 8px;
+            background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg-color));
+            color: var(--tg-theme-text-color, var(--text-color));
+            outline: none;
+            transition: border-color 0.3s;
+            appearance: none;
+        }
+
+        input:focus {
+            border-color: var(--tg-theme-button-color, var(--button-color));
+        }
+
+        /* ---- Token selector section ---- */
         .label-row {
             display: flex;
             justify-content: space-between;
@@ -87,43 +271,19 @@
             cursor: pointer;
             font-weight: 500;
             user-select: none;
-            display: none; /* Hidden until tokens load */
+            display: none;
         }
 
         .select-all-btn:hover {
             text-decoration: underline;
         }
 
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 16px;
-            font-size: 16px;
-            border: 1px solid var(--tg-theme-hint-color, var(--hint-color));
-            border-radius: 8px;
-            background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg-color));
-            color: var(--tg-theme-text-color, var(--text-color));
-            outline: none;
-            transition: border-color 0.3s;
-            appearance: none;
-        }
-
-        input:focus {
-            border-color: var(--tg-theme-button-color, var(--button-color));
-        }
-
-        /* --- Search Dropdown Styles --- */
-        
-        .search-wrapper {
-            position: relative;
-        }
-
-        /* Selected Chips Area */
         .selected-chips-area {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             margin-bottom: 8px;
-            min-height: 0; 
+            min-height: 0;
         }
 
         .selected-chip {
@@ -137,8 +297,6 @@
             user-select: none;
         }
 
-        /* Different style for the "All Selected" chip 
-           Uses inverted colors (Text Color as BG) for high contrast in both modes */
         .selected-chip.special {
             background-color: var(--tg-theme-text-color, var(--text-color));
             color: var(--tg-theme-bg-color, var(--bg-color));
@@ -150,12 +308,15 @@
             font-weight: bold;
             opacity: 0.8;
         }
-        
+
         .selected-chip .remove-btn:hover {
             opacity: 1;
         }
 
-        /* Dropdown List */
+        .search-wrapper {
+            position: relative;
+        }
+
         .dropdown-list {
             position: absolute;
             top: 100%;
@@ -164,7 +325,7 @@
             background-color: var(--tg-theme-bg-color, var(--bg-color));
             border: 1px solid var(--tg-theme-hint-color, var(--hint-color));
             border-radius: 8px;
-            max-height: 250px;
+            max-height: 220px;
             overflow-y: auto;
             z-index: 100;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -193,7 +354,6 @@
             text-align: center;
         }
 
-        /* Loading Spinner */
         .loading-spinner {
             width: 20px;
             height: 20px;
@@ -211,28 +371,132 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Submit Button */
+        /* Token selector disabled state */
+        .token-selector-disabled {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* ---- Next / Back buttons ---- */
+        .step-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .next-btn {
+            flex: 1;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            background-color: var(--tg-theme-button-color, var(--button-color));
+            color: var(--tg-theme-button-text-color, var(--button-text-color));
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .next-btn:hover {
+            opacity: 0.9;
+        }
+
+        .next-btn:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
+        .back-btn {
+            padding: 14px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            border: 2px solid var(--tg-theme-hint-color, var(--hint-color));
+            border-radius: 10px;
+            background-color: transparent;
+            color: var(--tg-theme-text-color, var(--text-color));
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .back-btn:hover {
+            opacity: 0.75;
+        }
+
+        /* ---- Summary / Confirm step ---- */
+        .confirm-card {
+            display: none;
+        }
+
+        .confirm-card.active {
+            display: block;
+        }
+
+        .confirm-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .confirm-item {
+            padding: 12px 16px;
+            border-radius: 10px;
+            background-color: var(--tg-theme-secondary-bg-color, var(--secondary-bg-color));
+        }
+
+        .confirm-item-label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--tg-theme-hint-color, var(--hint-color));
+            margin-bottom: 2px;
+        }
+
+        .confirm-item-value {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--tg-theme-text-color, var(--text-color));
+        }
+
         .submit-btn {
             width: 100%;
             padding: 14px 24px;
             font-size: 16px;
             font-weight: 600;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             background-color: var(--tg-theme-button-color, var(--button-color));
             color: var(--tg-theme-button-text-color, var(--button-text-color));
             cursor: pointer;
-            transition: opacity 0.3s;
-            margin-top: 24px;
+            transition: opacity 0.2s;
         }
 
         .submit-btn:hover {
             opacity: 0.9;
         }
 
+        .submit-back-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 500;
+            border: 2px solid var(--tg-theme-hint-color, var(--hint-color));
+            border-radius: 10px;
+            background-color: transparent;
+            color: var(--tg-theme-text-color, var(--text-color));
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .submit-back-btn:hover {
+            opacity: 0.75;
+        }
+
         .error-message {
-            color: var(--danger-color);
-            font-size: 14px;
+            color: var(--danger-color, #ff3b30);
+            font-size: 13px;
             margin-top: 8px;
             display: none;
         }
@@ -251,151 +515,715 @@
 
 <body>
     <div class="container">
-        <h1>Liquidation Alert</h1>
-        
-        <form id="configForm">
-            
-            <div class="form-group">
-                <div class="label-row">
-                    <label for="address">Address</label>
-                </div>
-                <input 
-                    type="text" 
-                    id="address" 
-                    name="address" 
-                    placeholder="Enter wallet address"
-                    required
+
+        <!-- Header -->
+        <div class="wizard-header">
+            <div class="wizard-title">New Liquidation Alert</div>
+            <div class="wizard-progress" id="progressDots"></div>
+        </div>
+
+        <!-- Completed step summaries (filled in dynamically) -->
+        <div class="completed-steps" id="completedSteps"></div>
+
+        <!-- ============================================================
+             STEP 1 — Address
+        ============================================================ -->
+        <div class="step-card active" id="step1">
+            <div class="step-question">Do you want to track a specific wallet address?</div>
+            <div class="step-hint">
+                If you skip this, the bot will notify you about liquidation events from <em>any</em> address on Hyperliquid — not just one trader. That can be noisy, but it's great for keeping a pulse on the whole market.
+            </div>
+
+            <div class="choice-group">
+                <button type="button" class="choice-btn" id="choiceSpecificAddress" onclick="selectAddressChoice('specific')">
+                    <span class="choice-icon">&#x1F4CD;</span>
+                    <span class="choice-text">
+                        <span class="choice-title">Track a specific address</span>
+                        <span class="choice-desc">I want alerts for one particular trader or wallet</span>
+                    </span>
+                </button>
+                <button type="button" class="choice-btn" id="choiceAllAddresses" onclick="selectAddressChoice('all')">
+                    <span class="choice-icon">&#x1F310;</span>
+                    <span class="choice-text">
+                        <span class="choice-title">Listen to all addresses</span>
+                        <span class="choice-desc">Alert me whenever anyone gets liquidated</span>
+                    </span>
+                </button>
+            </div>
+
+            <div class="inline-input-group" id="addressInputGroup">
+                <input
+                    type="text"
+                    id="address"
+                    name="address"
+                    placeholder="0x... wallet address"
+                    autocomplete="off"
                 >
                 <div class="error-message" id="addressError"></div>
             </div>
 
-            <div class="form-group">
+            <div class="step-actions">
+                <button type="button" class="next-btn" id="step1Next" onclick="goToNextStep()" disabled>Next</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             STEP 2 — Name (only shown when specific address chosen)
+        ============================================================ -->
+        <div class="step-card" id="step2">
+            <div class="step-question">Want to give this address a nickname?</div>
+            <div class="step-hint">
+                A label like "My main wallet" or "Whale #1" will appear in your alerts so you can instantly tell which address triggered them. Totally optional — leave it blank if you prefer.
+            </div>
+
+            <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="e.g. My main wallet (optional)"
+                autocomplete="off"
+            >
+
+            <div class="step-actions">
+                <button type="button" class="back-btn" onclick="goBack()">Back</button>
+                <button type="button" class="next-btn" onclick="goToStep(3)">Next</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             STEP 3 — Tokens
+        ============================================================ -->
+        <div class="step-card" id="step3">
+            <div class="step-question">Which tokens do you want to monitor?</div>
+            <div class="step-hint">
+                You can watch every token at once, or narrow it down to just the ones you care about.
+            </div>
+
+            <div class="choice-group">
+                <button type="button" class="choice-btn" id="choiceAllTokens" onclick="selectTokenChoice('all')">
+                    <span class="choice-icon">&#x2728;</span>
+                    <span class="choice-text">
+                        <span class="choice-title">All tokens</span>
+                        <span class="choice-desc">Monitor liquidations on every available market</span>
+                    </span>
+                </button>
+                <button type="button" class="choice-btn" id="choiceSpecificTokens" onclick="selectTokenChoice('specific')">
+                    <span class="choice-icon">&#x1F50D;</span>
+                    <span class="choice-text">
+                        <span class="choice-title">Pick specific tokens</span>
+                        <span class="choice-desc">I only care about certain markets</span>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Token search + chips — shown only when "specific" chosen -->
+            <div id="tokenSelectorSection" style="display:none; margin-top:4px;">
                 <div class="label-row">
-                    <label>Select Tokens</label>
+                    <label>Add tokens</label>
                     <span id="selectAllBtn" class="select-all-btn">Select All</span>
                 </div>
-                
+
                 <div class="selected-chips-area" id="selectedChipsArea"></div>
 
                 <div class="search-wrapper">
-                    <input 
-                        type="text" 
-                        id="tokenSearch" 
-                        placeholder="Search to add tokens..." 
+                    <input
+                        type="text"
+                        id="tokenSearch"
+                        placeholder="Search to add tokens..."
                         autocomplete="off"
                     >
                     <div id="loadingSpinner" class="loading-spinner"></div>
-                    
                     <div id="dropdownList" class="dropdown-list"></div>
                 </div>
-
-                <div class="error-message" id="tokensError"></div>
             </div>
 
-            <div class="form-group">
-                <div class="label-row">
-                    <label for="size">Size (USD)</label>
-                </div>
-                <input 
-                    type="text" 
+            <div class="error-message" id="tokensError"></div>
+
+            <div class="step-actions">
+                <button type="button" class="back-btn" onclick="goBack()">Back</button>
+                <button type="button" class="next-btn" id="step3Next" onclick="goToStep(4)" disabled>Next</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             STEP 4 — Threshold
+        ============================================================ -->
+        <div class="step-card" id="step4">
+            <div class="step-question">Minimum liquidation size?</div>
+            <div class="step-hint">
+                Liquidations happen constantly — even tiny ones worth a few dollars. The threshold filters those out so you only hear about events that are actually worth your attention. The default of <strong>$10,000</strong> is a good starting point for most people.
+            </div>
+
+            <div class="choice-group">
+                <button type="button" class="choice-btn" id="choiceDefaultSize" onclick="selectSizeChoice('default')">
+                    <span class="choice-icon">&#x2705;</span>
+                    <span class="choice-text">
+                        <span class="choice-title">Use the $10,000 default</span>
+                        <span class="choice-desc">Good for most use cases</span>
+                    </span>
+                </button>
+                <button type="button" class="choice-btn" id="choiceCustomSize" onclick="selectSizeChoice('custom')">
+                    <span class="choice-icon">&#x270F;&#xFE0F;</span>
+                    <span class="choice-text">
+                        <span class="choice-title">Set a custom amount</span>
+                        <span class="choice-desc">Enter your own threshold in USD</span>
+                    </span>
+                </button>
+            </div>
+
+            <div class="inline-input-group" id="sizeInputGroup">
+                <input
+                    type="text"
                     inputmode="decimal"
-                    id="size" 
-                    name="size" 
-                    placeholder="Enter size in USD"
-                    required
+                    id="size"
+                    name="size"
+                    placeholder="Amount in USD"
                 >
-                <div class="hint-text">Enter the amount in USD</div>
+                <div class="hint-text">Enter a positive number, e.g. 5000</div>
                 <div class="error-message" id="sizeError"></div>
             </div>
 
-            <button type="submit" class="submit-btn" id="submitBtn">Submit</button>
-        </form>
-    </div>
+            <div class="step-actions">
+                <button type="button" class="back-btn" onclick="goBack()">Back</button>
+                <button type="button" class="next-btn" id="step4Next" onclick="goToStep(5)" disabled>Next</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             STEP 5 — Confirm & Submit
+        ============================================================ -->
+        <div class="confirm-card" id="step5">
+            <div class="step-question">Looks good?</div>
+            <div class="step-hint">Here's a summary of your alert. Hit Submit to save it.</div>
+
+            <div class="confirm-list" id="confirmList"></div>
+
+            <!-- Hidden form inputs that the submit handler reads from -->
+            <form id="configForm" style="display:none;">
+                <input type="hidden" id="hiddenAddress" name="address">
+                <input type="hidden" id="hiddenSize" name="size">
+            </form>
+
+            <button type="button" class="submit-btn" id="submitBtn" onclick="submitForm()">Set Alert</button>
+            <button type="button" class="submit-back-btn" onclick="goBack()">Go Back</button>
+        </div>
+
+    </div><!-- /.container -->
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+        // ============================================================
+        // Telegram setup
+        // ============================================================
         const tg = window.Telegram?.WebApp || {
             expand: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
             initDataUnsafe: {}
         };
         tg.expand();
-        tg.MainButton.hide();
+        if (tg.MainButton) tg.MainButton.hide();
 
-        // State
-        const state = {
+        // ============================================================
+        // Wizard state
+        // ============================================================
+        const wizard = {
+            currentStep: 1,
+            // address
+            addressChoice: null,   // 'specific' | 'all'
+            address: '',
+            name: '',
+            // tokens
+            tokenChoice: null,     // 'all' | 'specific'
+            // size
+            sizeChoice: null,      // 'default' | 'custom'
+            customSize: ''
+        };
+
+        // Step sequence: step 2 (name) is only shown when address = 'specific'
+        // Returns the ordered array of step numbers that should be shown
+        function getStepSequence() {
+            if (wizard.addressChoice === 'specific') {
+                return [1, 2, 3, 4, 5];
+            }
+            return [1, 3, 4, 5];
+        }
+
+        // ============================================================
+        // Token state (shared across re-renders)
+        // ============================================================
+        const tokenState = {
             allTokens: [],
             filteredTokens: [],
             selectedTokens: new Set()
         };
+        let _tokenCache = null;
 
-        // DOM Elements
-        const form = document.getElementById('configForm');
-        const addressInput = document.getElementById('address');
-        const tokenSearchInput = document.getElementById('tokenSearch');
-        const dropdownList = document.getElementById('dropdownList');
-        const selectedChipsArea = document.getElementById('selectedChipsArea');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const sizeInput = document.getElementById('size');
-        const selectAllBtn = document.getElementById('selectAllBtn');
-        
-        // Errors
-        const addressError = document.getElementById('addressError');
-        const tokensError = document.getElementById('tokensError');
-        const sizeError = document.getElementById('sizeError');
+        // ============================================================
+        // Progress dots
+        // ============================================================
+        function renderProgress() {
+            const seq = getStepSequence();
+            const dots = document.getElementById('progressDots');
+            dots.innerHTML = '';
+            seq.forEach((stepNum) => {
+                const d = document.createElement('div');
+                d.className = 'progress-dot';
+                const idx = seq.indexOf(stepNum);
+                const currentIdx = seq.indexOf(wizard.currentStep);
+                if (idx < currentIdx) d.classList.add('done');
+                else if (idx === currentIdx) d.classList.add('active');
+                dots.appendChild(d);
+            });
+        }
 
-        // --- Fetch Data ---
-        async function fetchTokens() {
+        // ============================================================
+        // Completed step summaries
+        // ============================================================
+        function renderCompletedSteps() {
+            const container = document.getElementById('completedSteps');
+            container.innerHTML = '';
+
+            const seq = getStepSequence();
+            const currentIdx = seq.indexOf(wizard.currentStep);
+
+            seq.slice(0, currentIdx).forEach((stepNum) => {
+                if (stepNum === 5) return; // confirm step has no summary row
+                const row = buildSummaryRow(stepNum);
+                if (row) container.appendChild(row);
+            });
+        }
+
+        function buildSummaryRow(stepNum) {
+            let label, value;
+            switch (stepNum) {
+                case 1:
+                    label = 'Address';
+                    value = wizard.addressChoice === 'all'
+                        ? 'All addresses'
+                        : (wizard.address || '(none)');
+                    break;
+                case 2:
+                    label = 'Nickname';
+                    value = wizard.name || '(no nickname)';
+                    break;
+                case 3: {
+                    label = 'Tokens';
+                    if (wizard.tokenChoice === 'all') {
+                        value = 'All tokens';
+                    } else {
+                        const n = tokenState.selectedTokens.size;
+                        value = n === 0 ? '(none)' : (n === 1
+                            ? Array.from(tokenState.selectedTokens)[0]
+                            : `${Array.from(tokenState.selectedTokens).slice(0, 2).join(', ')}${n > 2 ? ` +${n - 2} more` : ''}`
+                        );
+                    }
+                    break;
+                }
+                case 4:
+                    label = 'Min. size';
+                    value = wizard.sizeChoice === 'default'
+                        ? '$10,000'
+                        : `$${Number(wizard.customSize).toLocaleString()}`;
+                    break;
+                default:
+                    return null;
+            }
+
+            const row = document.createElement('div');
+            row.className = 'summary-row';
+            row.innerHTML = `
+                <div class="summary-row-left">
+                    <span class="summary-row-label">${label}</span>
+                    <span class="summary-row-value">${value}</span>
+                </div>
+                <span class="summary-row-edit">Edit</span>
+            `;
+            row.addEventListener('click', () => jumpToStep(stepNum));
+            return row;
+        }
+
+        // ============================================================
+        // Step navigation
+        // ============================================================
+        function showStep(stepNum) {
+            // Hide all step cards
+            document.querySelectorAll('.step-card, .confirm-card').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            if (stepNum === 5) {
+                document.getElementById('step5').classList.add('active');
+            } else {
+                const card = document.getElementById('step' + stepNum);
+                if (card) card.classList.add('active');
+            }
+
+            wizard.currentStep = stepNum;
+            renderProgress();
+            renderCompletedSteps();
+
+            // Step-specific setup
+            if (stepNum === 3) {
+                fetchTokens(); // ensure tokens are loaded
+            }
+            if (stepNum === 5) {
+                renderConfirm();
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Advance to the next step in the dynamic sequence
+        function goToNextStep() {
+            const seq = getStepSequence();
+            const currentIdx = seq.indexOf(wizard.currentStep);
+            if (currentIdx < 0 || currentIdx >= seq.length - 1) return;
+            goToStep(seq[currentIdx + 1]);
+        }
+
+        function goToStep(targetStep) {
+            // Validate current step before advancing
+            if (!validateStep(wizard.currentStep)) return;
+
+            // Save current step values into wizard state
+            saveStepValues(wizard.currentStep);
+
+            showStep(targetStep);
+        }
+
+        function goBack() {
+            const seq = getStepSequence();
+            const currentIdx = seq.indexOf(wizard.currentStep);
+            if (currentIdx <= 0) return;
+            showStep(seq[currentIdx - 1]);
+        }
+
+        function jumpToStep(targetStep) {
+            // Save whatever the current step had
+            saveStepValues(wizard.currentStep);
+            showStep(targetStep);
+        }
+
+        // ============================================================
+        // Save step values into wizard state
+        // ============================================================
+        function saveStepValues(stepNum) {
+            if (stepNum === 1) {
+                if (wizard.addressChoice === 'specific') {
+                    wizard.address = document.getElementById('address').value.trim();
+                }
+            }
+            if (stepNum === 2) {
+                wizard.name = document.getElementById('name').value.trim();
+            }
+            if (stepNum === 4) {
+                if (wizard.sizeChoice === 'custom') {
+                    wizard.customSize = document.getElementById('size').value.trim();
+                }
+            }
+        }
+
+        // ============================================================
+        // Per-step validation
+        // ============================================================
+        function validateStep(stepNum) {
+            clearErrors();
+
+            if (stepNum === 1) {
+                if (!wizard.addressChoice) {
+                    // No choice made yet — Next button should be disabled anyway
+                    return false;
+                }
+                if (wizard.addressChoice === 'specific') {
+                    const addr = document.getElementById('address').value.trim();
+                    if (!addr) {
+                        showError('addressError', 'Please enter a wallet address.');
+                        return false;
+                    }
+                    if (!/^0x[a-fA-F0-9]{40}$/.test(addr)) {
+                        showError('addressError', 'Please enter a valid Ethereum address (0x followed by 40 hex characters).');
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            if (stepNum === 2) {
+                // Name is optional — always valid
+                return true;
+            }
+
+            if (stepNum === 3) {
+                if (!wizard.tokenChoice) return false;
+                if (wizard.tokenChoice === 'specific' && tokenState.selectedTokens.size === 0) {
+                    showError('tokensError', 'Please select at least one token, or choose "All tokens".');
+                    return false;
+                }
+                return true;
+            }
+
+            if (stepNum === 4) {
+                if (!wizard.sizeChoice) return false;
+                if (wizard.sizeChoice === 'custom') {
+                    const val = parseInput(document.getElementById('size').value);
+                    if (isNaN(val) || val <= 0) {
+                        showError('sizeError', 'Please enter a positive number.');
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            return true;
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
+        }
+
+        function showError(id, msg) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = msg;
+                el.classList.add('show');
+            }
+        }
+
+        // ============================================================
+        // Step 1 — Address choice
+        // ============================================================
+        window.selectAddressChoice = function(choice) {
+            wizard.addressChoice = choice;
+
+            document.getElementById('choiceSpecificAddress').classList.toggle('selected', choice === 'specific');
+            document.getElementById('choiceAllAddresses').classList.toggle('selected', choice === 'all');
+
+            const group = document.getElementById('addressInputGroup');
+            group.classList.toggle('show', choice === 'specific');
+
+            document.getElementById('step1Next').disabled = false;
+
+            if (choice === 'specific') {
+                setTimeout(() => document.getElementById('address').focus(), 50);
+            }
+        };
+
+        // Allow pressing Enter in the address field to advance
+        document.getElementById('address').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                goToNextStep();
+            }
+        });
+
+        // ============================================================
+        // Step 3 — Token choice
+        // ============================================================
+        window.selectTokenChoice = function(choice) {
+            wizard.tokenChoice = choice;
+
+            document.getElementById('choiceAllTokens').classList.toggle('selected', choice === 'all');
+            document.getElementById('choiceSpecificTokens').classList.toggle('selected', choice === 'specific');
+
+            const section = document.getElementById('tokenSelectorSection');
+            section.style.display = choice === 'specific' ? 'block' : 'none';
+
+            if (choice === 'all') {
+                // Eagerly populate selectedTokens with everything once tokens are loaded
+                // We handle this at submit time based on wizard.tokenChoice
+                document.getElementById('step3Next').disabled = false;
+            } else {
+                // Specific: need at least 1 token
+                document.getElementById('step3Next').disabled = tokenState.selectedTokens.size === 0;
+                fetchTokens();
+            }
+        };
+
+        // ============================================================
+        // Step 4 — Size choice
+        // ============================================================
+        window.selectSizeChoice = function(choice) {
+            wizard.sizeChoice = choice;
+
+            document.getElementById('choiceDefaultSize').classList.toggle('selected', choice === 'default');
+            document.getElementById('choiceCustomSize').classList.toggle('selected', choice === 'custom');
+
+            const inputGroup = document.getElementById('sizeInputGroup');
+            inputGroup.classList.toggle('show', choice === 'custom');
+
+            document.getElementById('step4Next').disabled = false;
+
+            if (choice === 'custom') {
+                setTimeout(() => document.getElementById('size').focus(), 50);
+            }
+        };
+
+        // Allow pressing Enter in the size field to advance
+        document.getElementById('size').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                goToStep(5);
+            }
+        });
+
+        // ============================================================
+        // Step 5 — Confirm
+        // ============================================================
+        function resolvedSize() {
+            if (wizard.sizeChoice === 'default') return 10000;
+            return parseInput(wizard.customSize);
+        }
+
+        function resolvedTokens() {
+            if (wizard.tokenChoice === 'all') {
+                // Return the full token list. If tokens haven't loaded yet (edge case),
+                // return an empty array — the backend should interpret that as "all".
+                // NOTE: If the backend does NOT support an empty array as "all tokens",
+                // this should be flagged for the telegram-developer agent to handle.
+                return tokenState.allTokens.length > 0 ? tokenState.allTokens : [];
+            }
+            return Array.from(tokenState.selectedTokens);
+        }
+
+        function renderConfirm() {
+            const list = document.getElementById('confirmList');
+            list.innerHTML = '';
+
+            const items = [];
+
+            // Address
+            if (wizard.addressChoice === 'all') {
+                items.push({ label: 'Address', value: 'All addresses on Hyperliquid' });
+            } else {
+                items.push({ label: 'Address', value: wizard.address });
+                if (wizard.name) {
+                    items.push({ label: 'Nickname', value: wizard.name });
+                }
+            }
+
+            // Tokens
+            const tokens = resolvedTokens();
+            if (wizard.tokenChoice === 'all') {
+                items.push({ label: 'Tokens', value: `All tokens (${tokenState.allTokens.length} markets)` });
+            } else {
+                const n = tokens.length;
+                items.push({
+                    label: 'Tokens',
+                    value: n <= 4
+                        ? tokens.join(', ')
+                        : `${tokens.slice(0, 3).join(', ')} + ${n - 3} more`
+                });
+            }
+
+            // Size
+            items.push({ label: 'Min. liquidation size', value: `$${resolvedSize().toLocaleString()}` });
+
+            items.forEach(({ label, value }) => {
+                const el = document.createElement('div');
+                el.className = 'confirm-item';
+                el.innerHTML = `
+                    <div class="confirm-item-label">${label}</div>
+                    <div class="confirm-item-value">${value}</div>
+                `;
+                list.appendChild(el);
+            });
+        }
+
+        // ============================================================
+        // Submit
+        // ============================================================
+        window.submitForm = function() {
+            const tokens = resolvedTokens();
+            const minimum_sz = resolvedSize();
+            const address = wizard.addressChoice === 'all' ? '' : wizard.address;
+            const name = wizard.name || '';
+
+            // Final guard — should not be reachable if wizard flow is correct
+            if (isNaN(minimum_sz) || minimum_sz <= 0) {
+                alert('Something went wrong with the size value. Please go back and re-enter it.');
+                return;
+            }
+
+            const formData = {
+                address,
+                name,
+                tokens,
+                minimum_sz
+            };
+
             try {
-                loadingSpinner.style.display = 'block';
+                const jsonData = JSON.stringify({
+                    type: 'liq',
+                    data: formData
+                });
+
+                tg.sendData(jsonData);
+
+                if (!tg.initDataUnsafe?.user) {
+                    console.log('OUTPUT DATA:', jsonData);
+                    alert(`Alert saved! ${tokens.length} token(s), min $${minimum_sz.toLocaleString()}.`);
+                }
+            } catch (error) {
+                console.error('Error sending data:', error);
+            }
+        };
+
+        // ============================================================
+        // Token fetching & chip selector
+        // ============================================================
+        async function fetchTokens() {
+            if (_tokenCache) {
+                tokenState.allTokens = _tokenCache;
+                if (tokenState.allTokens.length > 0) {
+                    document.getElementById('selectAllBtn').style.display = 'block';
+                }
+                return;
+            }
+
+            try {
+                document.getElementById('loadingSpinner').style.display = 'block';
                 const response = await fetch('https://api.hyperliquid.xyz/info', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'meta' })
+                    body: JSON.stringify({ type: 'allMids' })
                 });
 
                 if (!response.ok) throw new Error('Failed to fetch tokens');
 
                 const data = await response.json();
-                
-                if (data.universe && Array.isArray(data.universe)) {
-                    state.allTokens = data.universe
-                        .filter(token => token.name)
-                        .map(token => token.name);
-                }
-                
-                // Show the Select All button once we have data
-                if (state.allTokens.length > 0) {
-                    selectAllBtn.style.display = 'block';
-                }
+                const tokens = Object.keys(data).sort((a, b) => a.localeCompare(b));
 
+                _tokenCache = tokens;
+                tokenState.allTokens = tokens;
+
+                if (tokenState.allTokens.length > 0) {
+                    document.getElementById('selectAllBtn').style.display = 'block';
+                }
             } catch (error) {
                 console.error('Error fetching tokens:', error);
-                state.allTokens = ['BTC', 'ETH', 'SOL', 'AVAX', 'ARB', 'OP', 'LINK', 'UNI'];
-                selectAllBtn.style.display = 'block';
+                tokenState.allTokens = ['ARB', 'AVAX', 'BTC', 'ETH', 'LINK', 'OP', 'SOL', 'UNI'];
+                document.getElementById('selectAllBtn').style.display = 'block';
             } finally {
-                loadingSpinner.style.display = 'none';
+                document.getElementById('loadingSpinner').style.display = 'none';
             }
         }
 
-        // --- Render Functions ---
-
         function updateSelectAllBtnText() {
-            const isAllSelected = state.selectedTokens.size === state.allTokens.length && state.allTokens.length > 0;
-            selectAllBtn.textContent = isAllSelected ? "Deselect All" : "Select All";
+            const btn = document.getElementById('selectAllBtn');
+            const isAllSelected = tokenState.selectedTokens.size === tokenState.allTokens.length && tokenState.allTokens.length > 0;
+            btn.textContent = isAllSelected ? 'Deselect All' : 'Select All';
         }
 
         function renderDropdown(filterText = '') {
+            const dropdownList = document.getElementById('dropdownList');
             dropdownList.innerHTML = '';
-            
+
             const query = filterText.toLowerCase();
-            state.filteredTokens = state.allTokens.filter(token => {
-                const matchesSearch = token.toLowerCase().includes(query);
-                const notSelected = !state.selectedTokens.has(token);
-                return matchesSearch && notSelected;
+            tokenState.filteredTokens = tokenState.allTokens.filter(token => {
+                return token.toLowerCase().includes(query) && !tokenState.selectedTokens.has(token);
             });
 
-            if (state.filteredTokens.length === 0) {
+            if (tokenState.filteredTokens.length === 0) {
                 const noResult = document.createElement('div');
                 noResult.className = 'dropdown-item no-results';
                 noResult.textContent = query ? 'No tokens found' : 'All tokens selected';
@@ -403,180 +1231,108 @@
                 return;
             }
 
-            state.filteredTokens.slice(0, 50).forEach(token => {
+            tokenState.filteredTokens.slice(0, 50).forEach(token => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
                 item.textContent = token;
-                
                 item.addEventListener('mousedown', (e) => {
-                    e.preventDefault(); 
+                    e.preventDefault();
                     addToken(token);
                 });
-                
                 dropdownList.appendChild(item);
             });
         }
 
         function renderSelectedChips() {
-            selectedChipsArea.innerHTML = '';
-            
-            // Check if ALL are selected
-            const isAllSelected = state.selectedTokens.size === state.allTokens.length && state.allTokens.length > 0;
+            const area = document.getElementById('selectedChipsArea');
+            area.innerHTML = '';
+
+            const isAllSelected = tokenState.selectedTokens.size === tokenState.allTokens.length && tokenState.allTokens.length > 0;
 
             if (isAllSelected) {
-                // Render just ONE chip for better UI performance and look
                 const chip = document.createElement('div');
                 chip.className = 'selected-chip special';
-                chip.innerHTML = `
-                    All Tokens Selected (${state.selectedTokens.size})
-                    <span class="remove-btn" onclick="removeAllTokens()">&times;</span>
-                `;
-                selectedChipsArea.appendChild(chip);
+                chip.innerHTML = `All Tokens Selected (${tokenState.selectedTokens.size}) <span class="remove-btn" onclick="removeAllTokens()">&times;</span>`;
+                area.appendChild(chip);
             } else {
-                // Render individual chips
-                state.selectedTokens.forEach(token => {
+                tokenState.selectedTokens.forEach(token => {
                     const chip = document.createElement('div');
                     chip.className = 'selected-chip';
-                    chip.innerHTML = `
-                        ${token}
-                        <span class="remove-btn" onclick="removeToken('${token}')">&times;</span>
-                    `;
-                    selectedChipsArea.appendChild(chip);
+                    chip.innerHTML = `${token} <span class="remove-btn" onclick="removeToken('${token}')">&times;</span>`;
+                    area.appendChild(chip);
                 });
             }
-            
+
             updateSelectAllBtnText();
+            // Update step 3 Next button enabled state
+            if (wizard.tokenChoice === 'specific') {
+                document.getElementById('step3Next').disabled = tokenState.selectedTokens.size === 0;
+            }
         }
 
-        // --- Interaction Logic ---
-
         function addToken(token) {
-            state.selectedTokens.add(token);
-            tokenSearchInput.value = ''; 
+            tokenState.selectedTokens.add(token);
+            document.getElementById('tokenSearch').value = '';
             renderSelectedChips();
-            renderDropdown(); 
-            dropdownList.classList.remove('show'); 
-            tokensError.classList.remove('show');
+            renderDropdown();
+            document.getElementById('dropdownList').classList.remove('show');
+            document.getElementById('tokensError').classList.remove('show');
         }
 
         window.removeToken = function(token) {
-            state.selectedTokens.delete(token);
+            tokenState.selectedTokens.delete(token);
             renderSelectedChips();
-            renderDropdown(tokenSearchInput.value); // Refresh dropdown availability
+            renderDropdown(document.getElementById('tokenSearch').value);
         };
 
         window.removeAllTokens = function() {
-            state.selectedTokens.clear();
+            tokenState.selectedTokens.clear();
             renderSelectedChips();
-            renderDropdown(tokenSearchInput.value);
-        }
+            renderDropdown(document.getElementById('tokenSearch').value);
+        };
 
-        // --- Toggle Select All ---
-        selectAllBtn.addEventListener('click', () => {
-            const isAllSelected = state.selectedTokens.size === state.allTokens.length;
-
+        document.getElementById('selectAllBtn').addEventListener('click', () => {
+            const isAllSelected = tokenState.selectedTokens.size === tokenState.allTokens.length;
             if (isAllSelected) {
-                // Deselect All
-                state.selectedTokens.clear();
+                tokenState.selectedTokens.clear();
             } else {
-                // Select All
-                state.allTokens.forEach(token => state.selectedTokens.add(token));
+                tokenState.allTokens.forEach(t => tokenState.selectedTokens.add(t));
             }
-            
-            tokenSearchInput.value = ''; // clear search
-            tokensError.classList.remove('show');
+            document.getElementById('tokenSearch').value = '';
+            document.getElementById('tokensError').classList.remove('show');
             renderSelectedChips();
             renderDropdown();
         });
 
-        tokenSearchInput.addEventListener('input', (e) => {
+        document.getElementById('tokenSearch').addEventListener('input', (e) => {
             renderDropdown(e.target.value);
-            dropdownList.classList.add('show');
+            document.getElementById('dropdownList').classList.add('show');
         });
 
-        tokenSearchInput.addEventListener('focus', () => {
-            renderDropdown(tokenSearchInput.value);
-            dropdownList.classList.add('show');
+        document.getElementById('tokenSearch').addEventListener('focus', () => {
+            renderDropdown(document.getElementById('tokenSearch').value);
+            document.getElementById('dropdownList').classList.add('show');
         });
 
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-wrapper')) {
-                dropdownList.classList.remove('show');
+                document.getElementById('dropdownList').classList.remove('show');
             }
         });
 
-        // Helper: Parse Input (Mobile Friendly)
+        // ============================================================
+        // Helpers
+        // ============================================================
         function parseInput(val) {
             if (!val) return NaN;
-            return parseFloat(val.replace(/,/g, '.'));
+            return parseFloat(String(val).replace(/,/g, '.'));
         }
 
-        // --- Validation & Submit ---
-
-        function validateForm() {
-            let isValid = true;
-            addressError.classList.remove('show');
-            tokensError.classList.remove('show');
-            sizeError.classList.remove('show');
-
-            // Address
-            const address = addressInput.value.trim();
-            if (!address) {
-                addressError.textContent = 'Address is required';
-                addressError.classList.add('show');
-                isValid = false;
-            } else if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-                addressError.textContent = 'Please enter a valid Ethereum address (42 characters starting with 0x)';
-                addressError.classList.add('show');
-                isValid = false;
-            }
-
-            // Tokens
-            if (state.selectedTokens.size === 0) {
-                tokensError.textContent = 'Please select at least one token';
-                tokensError.classList.add('show');
-                isValid = false;
-            }
-
-            // Size
-            const sizeVal = parseInput(sizeInput.value);
-            if (!sizeInput.value || isNaN(sizeVal) || sizeVal <= 0) {
-                sizeError.textContent = 'Size must be a positive number';
-                sizeError.classList.add('show');
-                isValid = false;
-            }
-
-            return isValid;
-        }
-
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            if (!validateForm()) return;
-
-            const formData = {
-                address: addressInput.value.trim(),
-                tokens: Array.from(state.selectedTokens),
-                minimum_sz: parseInput(sizeInput.value)
-            };
-
-            try {
-                const jsonData = JSON.stringify({
-                    type: "liq",
-                    data: formData
-                });
-                
-                tg.sendData(jsonData);
-                
-                if (!tg.initDataUnsafe.user) {
-                    console.log('OUTPUT DATA:', jsonData);
-                    alert(`Form submitted! ${state.selectedTokens.size} tokens selected.`);
-                }
-            } catch (error) {
-                console.error('Error sending data:', error);
-            }
-        });
-
+        // ============================================================
+        // Boot
+        // ============================================================
+        renderProgress();
+        // Pre-fetch tokens in the background so step 3 loads instantly
         fetchTokens();
     </script>
 </body>
