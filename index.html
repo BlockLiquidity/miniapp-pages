@@ -15,175 +15,286 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            padding: 20px;
+            background-color: var(--tg-theme-bg-color, #0f0f13);
+            color: var(--tg-theme-text-color, #ffffff);
             min-height: 100vh;
+            padding: 20px 16px 40px;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 640px;
             margin: 0 auto;
-            padding-bottom: 40px;
+        }
+
+        /* ── Header ── */
+        .header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .header-icon {
+            font-size: 40px;
+            line-height: 1;
+            margin-bottom: 10px;
+            display: block;
         }
 
         h1 {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
-            margin-bottom: 12px;
-            text-align: center;
+            letter-spacing: -0.3px;
+            margin-bottom: 6px;
         }
 
         .subtitle {
-            text-align: center;
-            color: var(--tg-theme-hint-color, #999);
-            font-size: 14px;
-            margin-bottom: 32px;
+            color: var(--tg-theme-hint-color, #888);
+            font-size: 13px;
+            font-weight: 400;
         }
 
+        /* ── Grid ── */
         .alert-grid {
             display: grid;
-            grid-template-columns: 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
         }
 
+        @media (min-width: 480px) {
+            .alert-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 14px;
+            }
+        }
+
+        /* ── Card ── */
         .alert-card {
-            display: block;
-            padding: 18px 20px;
-            background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
-            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            text-align: center;
+            padding: 20px 12px 16px;
+            background-color: var(--tg-theme-secondary-bg-color, #1c1c22);
+            border-radius: 16px;
             text-decoration: none;
-            color: var(--tg-theme-text-color, #000000);
-            border: 1px solid var(--tg-theme-hint-color, #e0e0e0);
-            transition: all 0.2s ease;
+            color: var(--tg-theme-text-color, #ffffff);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Subtle top-edge accent line, colored per card */
+        .alert-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 16px;
+            right: 16px;
+            height: 2px;
+            border-radius: 0 0 2px 2px;
+            background: var(--card-accent, var(--tg-theme-button-color, #0088cc));
+            opacity: 0.7;
+            transition: opacity 0.18s ease;
         }
 
         .alert-card:hover {
-            background-color: var(--tg-theme-button-color, #0088cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 136, 204, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            background-color: var(--tg-theme-secondary-bg-color, #23232b);
+            border-color: rgba(255, 255, 255, 0.13);
+        }
+
+        .alert-card:hover::before {
+            opacity: 1;
         }
 
         .alert-card:active {
             transform: translateY(0);
+            box-shadow: none;
         }
 
-        .alert-card-header {
+        /* ── Card icon bubble ── */
+        .alert-icon-wrap {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
-            margin-bottom: 6px;
+            justify-content: center;
+            background: var(--card-accent-bg, rgba(0, 136, 204, 0.15));
+            margin-bottom: 12px;
+            flex-shrink: 0;
+            transition: background 0.18s ease;
+        }
+
+        .alert-card:hover .alert-icon-wrap {
+            background: var(--card-accent-bg-hover, rgba(0, 136, 204, 0.25));
         }
 
         .alert-icon {
-            font-size: 24px;
-            margin-right: 12px;
+            font-size: 26px;
+            line-height: 1;
         }
 
+        /* ── Card text ── */
         .alert-title {
-            font-size: 17px;
-            font-weight: 600;
-        }
-
-        .alert-description {
             font-size: 13px;
-            color: var(--tg-theme-hint-color, #999);
-            line-height: 1.4;
-            margin-left: 36px;
+            font-weight: 600;
+            line-height: 1.3;
+            color: var(--tg-theme-text-color, #ffffff);
         }
 
-        .alert-card:hover .alert-description {
-            color: rgba(255, 255, 255, 0.85);
+        /* ── Per-card accent colours ── */
+        /* New Token  – gold */
+        .card--new-token {
+            --card-accent: #f5a623;
+            --card-accent-bg: rgba(245, 166, 35, 0.14);
+            --card-accent-bg-hover: rgba(245, 166, 35, 0.24);
+        }
+        /* Liquidation – red */
+        .card--liquidation {
+            --card-accent: #e74c3c;
+            --card-accent-bg: rgba(231, 76, 60, 0.14);
+            --card-accent-bg-hover: rgba(231, 76, 60, 0.24);
+        }
+        /* New Trade – teal */
+        .card--new-trade {
+            --card-accent: #1abc9c;
+            --card-accent-bg: rgba(26, 188, 156, 0.14);
+            --card-accent-bg-hover: rgba(26, 188, 156, 0.24);
+        }
+        /* Trade Direction – purple */
+        .card--trade-direction {
+            --card-accent: #9b59b6;
+            --card-accent-bg: rgba(155, 89, 182, 0.14);
+            --card-accent-bg-hover: rgba(155, 89, 182, 0.24);
+        }
+        /* Funding Rate – green */
+        .card--funding-rate {
+            --card-accent: #2ecc71;
+            --card-accent-bg: rgba(46, 204, 113, 0.14);
+            --card-accent-bg-hover: rgba(46, 204, 113, 0.24);
+        }
+        /* Open Interest – blue */
+        .card--open-interest {
+            --card-accent: #3498db;
+            --card-accent-bg: rgba(52, 152, 219, 0.14);
+            --card-accent-bg-hover: rgba(52, 152, 219, 0.24);
+        }
+        /* Price Surge – orange */
+        .card--price-surge {
+            --card-accent: #e67e22;
+            --card-accent-bg: rgba(230, 126, 34, 0.14);
+            --card-accent-bg-hover: rgba(230, 126, 34, 0.24);
+        }
+        /* Token Price – cyan */
+        .card--token-price {
+            --card-accent: #00bcd4;
+            --card-accent-bg: rgba(0, 188, 212, 0.14);
+            --card-accent-bg-hover: rgba(0, 188, 212, 0.24);
+        }
+        /* Volume – pink */
+        .card--volume {
+            --card-accent: #e91e8c;
+            --card-accent-bg: rgba(233, 30, 140, 0.14);
+            --card-accent-bg-hover: rgba(233, 30, 140, 0.24);
         }
 
+        /* ── Footer ── */
         .footer {
             text-align: center;
             margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid var(--tg-theme-hint-color, #e0e0e0);
-            color: var(--tg-theme-hint-color, #999);
-            font-size: 12px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+            color: var(--tg-theme-hint-color, #666);
+            font-size: 11px;
+        }
+
+        .footer a {
+            color: var(--tg-theme-link-color, #0088cc);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h1>🔔 Block Liquidity Hub</h1>
-        <p class="subtitle">Select your notification</p>
+        <div class="header">
+            <span class="header-icon">🔔</span>
+            <h1>Block Liquidity Hub</h1>
+            <p class="subtitle">Choose a notification type to configure</p>
+        </div>
 
         <div class="alert-grid">
-            <a id="new-token-alert-link" href="new_token_alert.html" class="alert-card">
-                <div class="alert-card-header">
+
+            <a id="new-token-alert-link" href="new_token_alert.html" class="alert-card card--new-token">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">✨</span>
-                    <span class="alert-title">New Token Alert</span>
                 </div>
-                <div class="alert-description">Get notified when new tokens are listed</div>
+                <span class="alert-title">New Token Alert</span>
             </a>
 
-            <a href="liquidation_alert.html" class="alert-card">
-                <div class="alert-card-header">
+            <a href="liquidation_alert.html" class="alert-card card--liquidation">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">⚡</span>
-                    <span class="alert-title">Liquidation Alert</span>
                 </div>
-                <div class="alert-description">Track liquidation events and sizes</div>
+                <span class="alert-title">Liquidation Alert</span>
             </a>
 
-            <a href="new_trade_alert.html" class="alert-card">
-                <div class="alert-card-header">
+            <a href="new_trade_alert.html" class="alert-card card--new-trade">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">📊</span>
-                    <span class="alert-title">New Trade Alert</span>
                 </div>
-                <div class="alert-description">Monitor new trades as they happen</div>
+                <span class="alert-title">New Trade Alert</span>
             </a>
 
-            <a href="track_trade_direction_alert.html" class="alert-card">
-                <div class="alert-card-header">
+            <a href="track_trade_direction_alert.html" class="alert-card card--trade-direction">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">🎯</span>
-                    <span class="alert-title">Trade Direction Alert</span>
                 </div>
-                <div class="alert-description">Track specific wallet trading activities</div>
+                <span class="alert-title">Trade Direction Alert</span>
             </a>
 
-            <a href="funding_rate_alert.html" class="alert-card">
-                <div class="alert-card-header">
+            <a href="funding_rate_alert.html" class="alert-card card--funding-rate">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">💰</span>
-                    <span class="alert-title">Funding Rate Alert</span>
                 </div>
-                <div class="alert-description">Get notified when funding rates change significantly</div>
+                <span class="alert-title">Funding Rate Alert</span>
             </a>
 
-            <a href="open_interest_alert.html" class="alert-card">
-                <div class="alert-card-header">
+            <a href="open_interest_alert.html" class="alert-card card--open-interest">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">📈</span>
-                    <span class="alert-title">Open Interest Alert</span>
                 </div>
-                <div class="alert-description">Track changes in open interest</div>
+                <span class="alert-title">Open Interest Alert</span>
             </a>
 
-            <a href="price_surge_alert.html" class="alert-card">
-                <div class="alert-card-header">
+            <a href="price_surge_alert.html" class="alert-card card--price-surge">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">🚀</span>
-                    <span class="alert-title">Price Surge Alert</span>
                 </div>
-                <div class="alert-description">Get alerted on rapid price movements</div>
+                <span class="alert-title">Price Surge Alert</span>
             </a>
 
-            <a href="token_price_alert.html" class="alert-card">
-                <div class="alert-card-header">
+            <a href="token_price_alert.html" class="alert-card card--token-price">
+                <div class="alert-icon-wrap">
                     <span class="alert-icon">💵</span>
-                    <span class="alert-title">Token Price Alert</span>
                 </div>
-                <div class="alert-description">Set custom price targets for tokens</div>
+                <span class="alert-title">Token Price Alert</span>
             </a>
 
-            <a href="volume_alert.html" class="alert-card">
-                <div class="alert-card-header">
-                    <span class="alert-icon">📊</span>
-                    <span class="alert-title">Volume Alert</span>
+            <a href="volume_alert.html" class="alert-card card--volume">
+                <div class="alert-icon-wrap">
+                    <span class="alert-icon">🔊</span>
                 </div>
-                <div class="alert-description">Monitor trading volume spikes</div>
+                <span class="alert-title">Volume Alert</span>
             </a>
 
         </div>
@@ -195,17 +306,25 @@
 
     <script>
         const tg = window.Telegram?.WebApp;
-        
+
         if (tg) {
+            tg.ready();
             tg.expand();
             tg.MainButton.hide();
 
             // Apply theme colors
             if (tg.themeParams) {
-                document.body.style.backgroundColor = tg.themeParams.bg_color || '#ffffff';
-                document.body.style.color = tg.themeParams.text_color || '#000000';
+                document.body.style.backgroundColor = tg.themeParams.bg_color || '#0f0f13';
+                document.body.style.color = tg.themeParams.text_color || '#ffffff';
             }
         }
+
+        // Haptic feedback on card tap
+        document.querySelectorAll('.alert-card').forEach(card => {
+            card.addEventListener('click', () => {
+                tg?.HapticFeedback?.impactOccurred('light');
+            });
+        });
 
         // Forward new token subscription status to the new_token_alert page
         const params = new URLSearchParams(window.location.search);
