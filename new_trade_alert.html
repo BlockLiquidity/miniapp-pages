@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>New Trade Alert</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,9 +15,9 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #ffffff);
-            color: var(--tg-theme-text-color, #000000);
-            padding: 16px;
+            background-color: var(--tg-theme-bg-color, #0f0f13);
+            color: var(--tg-theme-text-color, #ffffff);
+            padding: 16px 16px 48px;
             line-height: 1.5;
             min-height: 100vh;
         }
@@ -26,150 +27,421 @@
             margin: 0 auto;
         }
 
+        /* ── Back button ── */
         .back-button {
             display: inline-flex;
             align-items: center;
-            color: var(--tg-theme-button-color, #0088cc);
+            gap: 6px;
+            color: var(--tg-theme-button-color, #1abc9c);
             text-decoration: none;
-            font-size: 16px;
-            margin-bottom: 16px;
+            font-size: 15px;
+            margin-bottom: 20px;
             cursor: pointer;
             font-weight: 500;
+            -webkit-tap-highlight-color: transparent;
+            transition: opacity 0.15s ease;
         }
 
         .back-button:hover {
-            opacity: 0.8;
+            opacity: 0.75;
         }
 
-        h1 {
-            font-size: 24px;
-            font-weight: 600;
+        /* ── Hero section ── */
+        .hero {
+            background-color: var(--tg-theme-secondary-bg-color, #1c1c22);
+            border-radius: 18px;
+            padding: 24px 20px 22px;
             margin-bottom: 24px;
-            color: var(--tg-theme-text-color, #000000);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Teal accent top bar matching the card--new-trade colour */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20px;
+            right: 20px;
+            height: 2px;
+            border-radius: 0 0 2px 2px;
+            background: #1abc9c;
+            opacity: 0.85;
+        }
+
+        .hero-icon-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .hero-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 13px;
+            background: rgba(26, 188, 156, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .hero-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .hero-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            color: var(--tg-theme-text-color, #ffffff);
+        }
+
+        .hero-subtitle {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color, #888);
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .hero-description {
+            font-size: 14px;
+            color: var(--tg-theme-text-color, #d0d0d8);
+            line-height: 1.6;
+            margin-bottom: 16px;
+            opacity: 0.85;
+        }
+
+        /* ── How it works pills ── */
+        .how-it-works {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .step-pill {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: rgba(26, 188, 156, 0.08);
+            border: 1px solid rgba(26, 188, 156, 0.18);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .step-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(26, 188, 156, 0.3);
+            color: #1abc9c;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .step-text {
+            font-size: 13px;
+            color: var(--tg-theme-text-color, #c8c8d0);
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+
+        /* ── Form card ── */
+        .form-card {
+            background-color: var(--tg-theme-secondary-bg-color, #1c1c22);
+            border-radius: 18px;
+            padding: 22px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .form-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--tg-theme-hint-color, #888);
+            margin-bottom: 18px;
         }
 
         .form-group {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
         }
 
         label {
             display: block;
             font-size: 14px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #ffffff);
+        }
+
+        .badge-optional {
+            font-size: 11px;
             font-weight: 500;
+            color: var(--tg-theme-hint-color, #888);
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 5px;
+            padding: 2px 7px;
+            letter-spacing: 0.3px;
+        }
+
+        .field-hint {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #888);
             margin-bottom: 8px;
-            color: var(--tg-theme-text-color, #000000);
+            line-height: 1.45;
         }
 
         input[type="text"] {
             width: 100%;
-            padding: 12px 16px;
-            font-size: 16px;
-            border: 1px solid var(--tg-theme-hint-color, #999999);
-            border-radius: 8px;
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            color: var(--tg-theme-text-color, #000000);
+            padding: 12px 14px;
+            font-size: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            background-color: var(--tg-theme-bg-color, #0f0f13);
+            color: var(--tg-theme-text-color, #ffffff);
             outline: none;
-            transition: border-color 0.3s;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
             appearance: none;
+            -webkit-appearance: none;
         }
 
-        input:focus {
-            border-color: var(--tg-theme-button-color, #0088cc);
+        input[type="text"]::placeholder {
+            color: var(--tg-theme-hint-color, #555);
         }
 
-        /* Submit Button */
+        input[type="text"]:focus {
+            border-color: #1abc9c;
+            box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.15);
+        }
+
+        .error-message {
+            display: none;
+            color: #ff5f57;
+            font-size: 12px;
+            margin-top: 6px;
+            padding: 7px 10px;
+            background: rgba(255, 95, 87, 0.1);
+            border-radius: 7px;
+            border-left: 3px solid #ff5f57;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.07);
+            margin: 20px 0;
+        }
+
+        /* ── Submit button ── */
         .submit-btn {
             width: 100%;
-            padding: 14px 24px;
+            padding: 15px 24px;
             font-size: 16px;
             font-weight: 600;
             border: none;
-            border-radius: 8px;
-            background-color: var(--tg-theme-button-color, #0088cc);
-            color: var(--tg-theme-button-text-color, #ffffff);
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+            color: #ffffff;
             cursor: pointer;
-            transition: opacity 0.3s;
-            margin-top: 8px;
+            transition: opacity 0.2s ease, transform 0.15s ease;
+            margin-top: 20px;
+            letter-spacing: 0.1px;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .submit-btn:hover {
             opacity: 0.9;
         }
 
-        .error-message {
-            color: #ff3b30;
-            font-size: 14px;
-            margin-top: 8px;
-            display: none;
+        .submit-btn:active {
+            transform: scale(0.98);
+            opacity: 1;
         }
 
-        .error-message.show {
-            display: block;
+        /* ── Example address chip ── */
+        .example-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--tg-theme-hint-color, #888);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 4px 9px;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .example-chip:hover {
+            background: rgba(26, 188, 156, 0.12);
+            color: #1abc9c;
+            border-color: rgba(26, 188, 156, 0.25);
+        }
+
+        .example-chip-label {
+            color: #1abc9c;
+            font-weight: 600;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <a href="index.html" class="back-button">← Back to Home</a>
-        <h1>New Trade Alert</h1>
-        
-        <form id="configForm">
-            
-            <div class="form-group">
-                <label for="address">Wallet Address</label>
-                <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    placeholder="Enter wallet address (0x...)"
-                    required
-                >
-                <div class="error-message" id="addressError"></div>
+
+        <a href="index.html" class="back-button">&#8592; Back to Home</a>
+
+        <!-- Hero / description section -->
+        <div class="hero">
+            <div class="hero-icon-row">
+                <div class="hero-icon-wrap">
+                    <span class="hero-icon">&#128202;</span>
+                </div>
+                <div>
+                    <div class="hero-title">New Trade Alert</div>
+                    <div class="hero-subtitle">Hyperliquid wallet tracker</div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="name">Name (optional)</label>
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    placeholder="Give this address a name"
-                >
-            </div>
+            <p class="hero-description">
+                Get notified the moment a tracked wallet opens a new trading position on Hyperliquid.
+                Follow smart money, copy-trade setups, or keep an eye on key market players in real time.
+            </p>
 
-            <button type="submit" class="submit-btn" id="submitBtn">Save Alert</button>
-        </form>
+            <div class="how-it-works">
+                <div class="step-pill">
+                    <div class="step-num">1</div>
+                    <div class="step-text">Paste the Hyperliquid wallet address you want to track.</div>
+                </div>
+                <div class="step-pill">
+                    <div class="step-num">2</div>
+                    <div class="step-text">Optionally give it a friendly name so alerts are easy to identify.</div>
+                </div>
+                <div class="step-pill">
+                    <div class="step-num">3</div>
+                    <div class="step-text">Save &mdash; you'll receive a Telegram message whenever that wallet enters a new position.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form card -->
+        <div class="form-card">
+            <div class="form-card-title">Alert Configuration</div>
+
+            <form id="configForm">
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="address">Wallet Address</label>
+                    </div>
+                    <p class="field-hint">The on-chain address of the Hyperliquid trader you want to monitor. Must be a valid EVM address starting with <code style="background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:4px;font-size:11px;">0x</code>.</p>
+                    <input
+                        type="text"
+                        id="address"
+                        name="address"
+                        placeholder="0x1234...abcd"
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        required
+                    >
+                    <div class="error-message" id="addressError"></div>
+                    <span class="example-chip" id="exampleChip" title="Tap to prefill an example">
+                        <span class="example-chip-label">eg.</span>
+                        0x0bEa6B545B3E3B3cEaC379F6C2F2D71B2f5B2b5E
+                    </span>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="name">Display Name</label>
+                        <span class="badge-optional">Optional</span>
+                    </div>
+                    <p class="field-hint">A short label for this wallet (e.g. "Whale #1" or "My Fund"). Shown in alert messages to help you distinguish between multiple tracked wallets.</p>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="e.g. Whale Trader, My Mentor"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">Save Alert</button>
+
+            </form>
+        </div>
+
     </div>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const tg = window.Telegram?.WebApp || {
             expand: () => {},
+            ready: () => {},
             sendData: (data) => console.log('Would send to Telegram:', data),
-            initDataUnsafe: {}
+            initDataUnsafe: {},
+            MainButton: { hide: () => {} },
+            HapticFeedback: { impactOccurred: () => {}, notificationOccurred: () => {} }
         };
+
+        tg.ready();
         tg.expand();
         tg.MainButton.hide();
 
         // Elements
-        const form = document.getElementById('configForm');
+        const form         = document.getElementById('configForm');
         const addressInput = document.getElementById('address');
-        const nameInput = document.getElementById('name');
+        const nameInput    = document.getElementById('name');
         const addressError = document.getElementById('addressError');
+        const exampleChip  = document.getElementById('exampleChip');
+
+        // Prefill example address on chip tap (helps first-time users understand the expected format)
+        exampleChip.addEventListener('click', () => {
+            addressInput.value = '0x0bEa6B545B3E3B3cEaC379F6C2F2D71B2f5B2b5E';
+            addressInput.focus();
+            tg.HapticFeedback?.impactOccurred('light');
+        });
 
         function validateForm() {
             let isValid = true;
             addressError.classList.remove('show');
 
             const address = addressInput.value.trim();
-            
+
             if (!address) {
-                addressError.textContent = 'Address is required';
+                addressError.textContent = 'Wallet address is required.';
                 addressError.classList.add('show');
                 isValid = false;
             } else if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
-                addressError.textContent = 'Please enter a valid address (starts with 0x)';
+                addressError.textContent = 'Enter a valid EVM address (0x followed by 40 hex characters).';
                 addressError.classList.add('show');
                 isValid = false;
             }
@@ -180,7 +452,12 @@
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            if (!validateForm()) return;
+            if (!validateForm()) {
+                tg.HapticFeedback?.notificationOccurred('error');
+                return;
+            }
+
+            tg.HapticFeedback?.notificationOccurred('success');
 
             const formData = {
                 address: addressInput.value.trim()
@@ -196,9 +473,9 @@
                     type: "new_trade",
                     data: formData
                 });
-                
+
                 tg.sendData(jsonData);
-                
+
                 if (!tg.initDataUnsafe.user) {
                     console.log('OUTPUT DATA:', jsonData);
                     alert('Alert saved! Check console for data.');
