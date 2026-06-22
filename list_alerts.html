@@ -183,6 +183,7 @@
             { id: 3, label: "Open Interest" },
             { id: 5, label: "Volume" },
             { id: 6, label: "Surge" },
+            { id: 7, label: "Spot Transfer" },
             { id: 9, label: "New Trade" },
             { id: 8, label: "Direction" },
             { id: 4, label: "Funding" },
@@ -364,6 +365,7 @@
                 return `Liquidation: <b>${tokensDesc}</b>${amt}`;
             }
             if (k === 6) return `Surge: <b>${ex.threshold ?? 0}%</b>. Notify ${ex.frequency ?? "always"}`;
+            if (k === 7) return `Spot Transfer (bridge) min value: <b>$${ex.threshold ?? 0}</b>`;
             if (k === 3) return `OI Change ${ex.midnight ? "(on daily open)" : ""}: <b>${ex.threshold ?? 0}%</b>. Notify ${ex.frequency ?? "always"}`;
             if (k === 4) return `FR Change ${ex.midnight ? "(on daily open)" : ""}: <b>${ex.threshold ?? 0}%</b>. Notify ${ex.frequency ?? "always"}`;
             if (k === 5) return `Volume Change ${ex.midnight ? "(on daily open)" : ""}: <b>${ex.threshold ?? 0}%</b>. Notify ${ex.frequency ?? "always"}`;
