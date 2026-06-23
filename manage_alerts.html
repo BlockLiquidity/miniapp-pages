@@ -981,11 +981,16 @@
             function pick(t) {
                 if (multi) {
                     createState.tokens.add(t);
+                    renderChips();
+                    // Clear the query so the user can immediately search for the next token.
+                    search.value = '';
+                    renderDropdown('');
+                    search.focus();
                 } else {
                     createState.singleToken = t;
                     dropdown.classList.remove('show');
+                    renderChips();
                 }
-                renderChips();
             }
 
             search.addEventListener('input', (e) => renderDropdown(e.target.value));
@@ -1120,7 +1125,7 @@
                 // In Telegram, sendData closes the mini-app and the bot reopens
                 // the list with fresh data. Close the modal for the browser fallback.
                 closeCreateModal();
-                if (!tg.initDataUnsafe.user) {
+                if (!tg.initDataUnsafe?.user) {
                     console.log('OUTPUT DATA:', json);
                     alert('Alert submitted (demo). Payload logged to console.');
                 }
