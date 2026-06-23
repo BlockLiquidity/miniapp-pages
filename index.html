@@ -208,6 +208,12 @@
             --card-accent-bg: rgba(26, 188, 156, 0.14);
             --card-accent-bg-hover: rgba(26, 188, 156, 0.24);
         }
+        /* Verified Signal – emerald */
+        .card--verified-signal {
+            --card-accent: #27ae60;
+            --card-accent-bg: rgba(39, 174, 96, 0.14);
+            --card-accent-bg-hover: rgba(39, 174, 96, 0.24);
+        }
 
         /* ── Footer ── */
         .footer {
@@ -310,6 +316,13 @@
                 <span class="alert-title">Spot Transfer Alert</span>
             </a>
 
+            <a id="verified-signal-alert-link" href="verified_signal_alert.html" class="alert-card card--verified-signal">
+                <div class="alert-icon-wrap">
+                    <span class="alert-icon">✅</span>
+                </div>
+                <span class="alert-title">Hedge Fund Verified Signal Alert</span>
+            </a>
+
         </div>
 
         <div class="footer">
@@ -346,6 +359,15 @@
             const link = document.getElementById('new-token-alert-link');
             if (link) {
                 link.href = `new_token_alert.html?nts=${nts}`;
+            }
+        }
+
+        // Forward verified-signal subscription status to the verified_signal_alert page
+        const vs = params.get('vs');
+        if (vs !== null) {
+            const vsLink = document.getElementById('verified-signal-alert-link');
+            if (vsLink) {
+                vsLink.href = `verified_signal_alert.html?vs=${vs}`;
             }
         }
     </script>

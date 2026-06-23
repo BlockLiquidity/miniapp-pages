@@ -255,6 +255,7 @@
             { id: 6,  label: "Surge",          icon: "🚀" },
             { id: 7,  label: "Spot Transfer",  icon: "🔄" },
             { id: 8,  label: "Direction",       icon: "🎯" },
+            { id: 15, label: "Hedge Fund Verified Signal", icon: "✅" },
             { id: 0,  label: "New Token",      icon: "✨" },
         ];
 
@@ -339,6 +340,8 @@
                         detail: name ? addr : (addr ? addr.substring(0, 16) + '...' : '')
                     };
                 }
+                case 15:
+                    return { title: "Hedge Fund Verified Signal", detail: "Notify on verified hedge-fund signals" };
                 default:
                     return { title: `Alert`, detail: `kind ${k}` };
             }

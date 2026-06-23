@@ -187,6 +187,7 @@
             { id: 9, label: "New Trade" },
             { id: 8, label: "Direction" },
             { id: 4, label: "Funding" },
+            { id: 15, label: "Hedge Fund Verified Signal" },
             { id: 0, label: "New Token" },
         ];
 
@@ -379,6 +380,7 @@
                 return `New Trade by ${name}`;
             }
             if (k === 0) return `Notify for new tokens`;
+            if (k === 15) return `Notify on verified hedge-fund signals`;
             return "Custom Alert Notification";
         }
 
