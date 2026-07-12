@@ -650,6 +650,13 @@
             } finally {
                 loadingSpinner.style.display = 'none';
             }
+            // If the fetch failed (or returned nothing), fall back to common perps so
+            // the picker is still usable and the user isn't trapped with an empty list.
+            // These are exact HL coin symbols, so they match fill.coin directly.
+            if (!Array.isArray(state.allTokens) || state.allTokens.length === 0) {
+                state.allTokens = ['BTC', 'ETH', 'SOL', 'HYPE', 'XRP', 'DOGE', 'AVAX', 'ARB', 'OP', 'LINK', 'SUI', 'BNB'];
+                tokensLoaded = false; // allow a real fetch to retry next time the picker opens
+            }
             renderDropdown();
         }
 
