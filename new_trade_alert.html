@@ -308,6 +308,155 @@
             color: #1abc9c;
             font-weight: 600;
         }
+
+        /* ── Token picker action links ── */
+        .action-links {
+            font-size: 13px;
+        }
+
+        .action-link {
+            color: #1abc9c;
+            cursor: pointer;
+            margin-left: 14px;
+            text-decoration: none;
+            font-weight: 600;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Token filter: "all tokens" toggle ── */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background-color: var(--tg-theme-bg-color, #0f0f13);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .toggle-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            accent-color: #1abc9c;
+            cursor: pointer;
+        }
+
+        .toggle-row label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* ── Selected token chips ── */
+        .selected-chips-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+            min-height: 0;
+        }
+
+        .selected-chip {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(26, 188, 156, 0.15);
+            border: 1px solid rgba(26, 188, 156, 0.3);
+            color: #1abc9c;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            user-select: none;
+            max-width: 100%;
+        }
+
+        .selected-chip .remove-btn {
+            margin-left: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .selected-chip .remove-btn:hover {
+            opacity: 1;
+        }
+
+        .selected-chip.all-selected {
+            background: rgba(26, 188, 156, 0.2);
+            width: 100%;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        /* ── Token search dropdown ── */
+        .search-wrapper {
+            position: relative;
+        }
+
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--tg-theme-secondary-bg-color, #1c1c22);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            display: none;
+            margin-top: 6px;
+        }
+
+        .dropdown-list.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            font-size: 15px;
+        }
+
+        .dropdown-item:hover {
+            background-color: rgba(26, 188, 156, 0.12);
+        }
+
+        .dropdown-item.no-results {
+            color: var(--tg-theme-hint-color, #888);
+            cursor: default;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-top-color: #1abc9c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
     </style>
 </head>
 
@@ -395,12 +544,50 @@
                     >
                 </div>
 
+                <div class="divider"></div>
+
+                <!-- Token scope: all tokens (default) or a specific set -->
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="allTokensToggle">Token Scope</label>
+                        <span class="badge-optional">Optional</span>
+                    </div>
+                    <p class="field-hint">By default you'll be alerted for every token this wallet trades. Turn this off to only be notified for specific token(s) &mdash; including HIP-3 markets.</p>
+                    <div class="toggle-row">
+                        <input type="checkbox" id="allTokensToggle" checked>
+                        <label for="allTokensToggle">Alert on all tokens</label>
+                    </div>
+                </div>
+
+                <!-- Specific-token picker, shown only when "all tokens" is off -->
+                <div class="form-group hidden" id="tokenPickerGroup">
+                    <div class="label-row">
+                        <label>Select Tokens</label>
+                        <div class="action-links">
+                            <span class="action-link" id="selectAllBtn">Select All</span>
+                            <span class="action-link" id="clearAllBtn">Clear All</span>
+                        </div>
+                    </div>
+
+                    <div class="selected-chips-area" id="selectedChipsArea"></div>
+
+                    <div class="search-wrapper">
+                        <input type="text" id="tokenSearch" placeholder="Search to add tokens (e.g. BTC)..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+                        <div id="loadingSpinner" class="loading-spinner"></div>
+                        <div id="dropdownList" class="dropdown-list"></div>
+                    </div>
+
+                    <div class="error-message" id="tokensError"></div>
+                </div>
+
                 <button type="submit" class="submit-btn" id="submitBtn">Save Alert</button>
 
             </form>
         </div>
 
     </div>
+
+    <script src="token-fetcher.js"></script>
 
     <script>
         const tg = window.Telegram?.WebApp || {
@@ -416,12 +603,27 @@
         tg.expand();
         tg.MainButton.hide();
 
+        // Token-picker state
+        const state = {
+            allTokens: [],
+            selectedTokens: new Set()
+        };
+
         // Elements
-        const form         = document.getElementById('configForm');
-        const addressInput = document.getElementById('address');
-        const nameInput    = document.getElementById('name');
-        const addressError = document.getElementById('addressError');
-        const exampleChip  = document.getElementById('exampleChip');
+        const form              = document.getElementById('configForm');
+        const addressInput      = document.getElementById('address');
+        const nameInput         = document.getElementById('name');
+        const addressError      = document.getElementById('addressError');
+        const exampleChip       = document.getElementById('exampleChip');
+        const allTokensToggle   = document.getElementById('allTokensToggle');
+        const tokenPickerGroup  = document.getElementById('tokenPickerGroup');
+        const tokenSearchInput  = document.getElementById('tokenSearch');
+        const dropdownList      = document.getElementById('dropdownList');
+        const selectedChipsArea = document.getElementById('selectedChipsArea');
+        const loadingSpinner    = document.getElementById('loadingSpinner');
+        const selectAllBtn      = document.getElementById('selectAllBtn');
+        const clearAllBtn       = document.getElementById('clearAllBtn');
+        const tokensError       = document.getElementById('tokensError');
 
         // Prefill example address on chip tap (helps first-time users understand the expected format)
         exampleChip.addEventListener('click', () => {
@@ -430,9 +632,163 @@
             tg.HapticFeedback?.impactOccurred('light');
         });
 
+        // ── Token list is only needed for the specific-token picker, so it is
+        //    loaded lazily the first time the user turns "all tokens" off. The
+        //    fetcher (token-fetcher.js) yields the exact Hyperliquid coin symbols
+        //    that appear in node_events:fills (perps bare e.g. BTC; HIP-3 perps
+        //    namespaced e.g. xyz:GOOGL), which is what notification-core matches on.
+        let tokensLoaded = false;
+        async function ensureTokensLoaded() {
+            if (tokensLoaded) return;
+            tokensLoaded = true;
+            loadingSpinner.style.display = 'block';
+            try {
+                state.allTokens = await getAllHyperliquidTokens();
+            } catch (err) {
+                console.error('Error fetching tokens:', err);
+                state.allTokens = [];
+            } finally {
+                loadingSpinner.style.display = 'none';
+            }
+            // If the fetch failed (or returned nothing), fall back to common perps so
+            // the picker is still usable and the user isn't trapped with an empty list.
+            // These are exact HL coin symbols, so they match fill.coin directly.
+            if (!Array.isArray(state.allTokens) || state.allTokens.length === 0) {
+                state.allTokens = ['BTC', 'ETH', 'SOL', 'HYPE', 'XRP', 'DOGE', 'AVAX', 'ARB', 'OP', 'LINK', 'SUI', 'BNB'];
+                tokensLoaded = false; // allow a real fetch to retry next time the picker opens
+            }
+            renderDropdown();
+        }
+
+        function syncPickerVisibility() {
+            if (allTokensToggle.checked) {
+                tokenPickerGroup.classList.add('hidden');
+                tokensError.classList.remove('show');
+            } else {
+                tokenPickerGroup.classList.remove('hidden');
+                ensureTokensLoaded();
+            }
+        }
+        allTokensToggle.addEventListener('change', syncPickerVisibility);
+
+        // ── Dropdown & chip rendering (ported from the Track Trade Direction picker) ──
+        function renderDropdown(filterText = '') {
+            dropdownList.innerHTML = '';
+
+            const query = filterText.toLowerCase();
+            const filtered = state.allTokens.filter(token =>
+                token.toLowerCase().includes(query) && !state.selectedTokens.has(token)
+            );
+
+            if (state.allTokens.length > 0 && state.selectedTokens.size === state.allTokens.length) {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item no-results';
+                item.textContent = 'All tokens currently selected';
+                dropdownList.appendChild(item);
+                return;
+            }
+
+            if (filtered.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'dropdown-item no-results';
+                noResult.textContent = state.allTokens.length === 0
+                    ? 'No tokens available'
+                    : (query ? 'No tokens found' : 'All available tokens selected');
+                dropdownList.appendChild(noResult);
+                return;
+            }
+
+            // Cap the rendered list for speed on large token universes.
+            filtered.slice(0, 50).forEach(token => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = token;
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    addToken(token);
+                });
+                dropdownList.appendChild(item);
+            });
+        }
+
+        function renderSelectedChips() {
+            selectedChipsArea.innerHTML = '';
+
+            // Collapse a full selection into one chip to avoid rendering 500+ nodes.
+            if (state.selectedTokens.size > 0 && state.selectedTokens.size === state.allTokens.length) {
+                const chip = document.createElement('div');
+                chip.className = 'selected-chip all-selected';
+                chip.innerHTML = `All ${state.selectedTokens.size} Tokens Selected <span class="remove-btn">&times;</span>`;
+                chip.querySelector('.remove-btn').addEventListener('click', clearAll);
+                selectedChipsArea.appendChild(chip);
+                return;
+            }
+
+            state.selectedTokens.forEach(token => {
+                const chip = document.createElement('div');
+                chip.className = 'selected-chip';
+                const label = document.createTextNode(token + ' ');
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-btn';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.addEventListener('click', () => removeToken(token));
+                chip.appendChild(label);
+                chip.appendChild(removeBtn);
+                selectedChipsArea.appendChild(chip);
+            });
+        }
+
+        function addToken(token) {
+            state.selectedTokens.add(token);
+            tokenSearchInput.value = '';
+            renderSelectedChips();
+            renderDropdown();
+            dropdownList.classList.remove('show');
+            tokensError.classList.remove('show');
+        }
+
+        function removeToken(token) {
+            state.selectedTokens.delete(token);
+            renderSelectedChips();
+            renderDropdown();
+        }
+
+        function clearAll() {
+            state.selectedTokens.clear();
+            renderSelectedChips();
+            renderDropdown();
+        }
+
+        selectAllBtn.addEventListener('click', () => {
+            state.allTokens.forEach(t => state.selectedTokens.add(t));
+            tokenSearchInput.value = '';
+            renderSelectedChips();
+            renderDropdown();
+            tokensError.classList.remove('show');
+        });
+
+        clearAllBtn.addEventListener('click', clearAll);
+
+        tokenSearchInput.addEventListener('input', (e) => {
+            renderDropdown(e.target.value);
+            dropdownList.classList.add('show');
+        });
+
+        tokenSearchInput.addEventListener('focus', () => {
+            renderDropdown(tokenSearchInput.value);
+            dropdownList.classList.add('show');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-wrapper')) {
+                dropdownList.classList.remove('show');
+            }
+        });
+
         function validateForm() {
             let isValid = true;
             addressError.classList.remove('show');
+            tokensError.classList.remove('show');
 
             const address = addressInput.value.trim();
 
@@ -443,6 +799,12 @@
             } else if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
                 addressError.textContent = 'Enter a valid EVM address (0x followed by 40 hex characters).';
                 addressError.classList.add('show');
+                isValid = false;
+            }
+
+            if (!allTokensToggle.checked && state.selectedTokens.size === 0) {
+                tokensError.textContent = 'Select at least one token, or turn "Alert on all tokens" back on.';
+                tokensError.classList.add('show');
                 isValid = false;
             }
 
@@ -468,6 +830,16 @@
                 formData.name = nameValue;
             }
 
+            // Wire format expected by bl-telegram-bot's NewTradeParams (TokenFilter):
+            //   - "ALL_TOKEN" (string)   → fire for every coin (the default)
+            //   - ["BTC","xyz:GOOGL"]     → fire only for these exact HL coin symbols
+            // A full manual selection collapses to "ALL_TOKEN" to keep the payload
+            // small (well under Telegram's ~4KB WebApp data limit).
+            const allSelected = state.allTokens.length > 0 && state.selectedTokens.size === state.allTokens.length;
+            formData.tokens = (allTokensToggle.checked || allSelected)
+                ? "ALL_TOKEN"
+                : Array.from(state.selectedTokens);
+
             try {
                 const jsonData = JSON.stringify({
                     type: "new_trade",
@@ -478,12 +850,18 @@
 
                 if (!tg.initDataUnsafe.user) {
                     console.log('OUTPUT DATA:', jsonData);
-                    alert('Alert saved! Check console for data.');
+                    const scope = formData.tokens === "ALL_TOKEN"
+                        ? "ALL tokens"
+                        : `${formData.tokens.length} token(s)`;
+                    alert(`Alert saved! Scope: ${scope}.`);
                 }
             } catch (error) {
                 console.error('Error sending data:', error);
             }
         });
+
+        // Default = "all tokens": picker stays hidden until the user opts into a filter.
+        syncPickerVisibility();
     </script>
 </body>
 </html>
