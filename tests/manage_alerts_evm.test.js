@@ -67,6 +67,15 @@ const assert = (cond, msg) => {
   assert((await page.locator('#tabs .tab', { hasText: 'HyperEVM Transfer' }).count()) === 1,
     'a HyperEVM Transfer tab appears once there is one');
 
+  // The custom name is user-supplied and lands in innerHTML.
+  await page.goto(`file://${path}?d=${b64([{ ...alerts[0], id: '901',
+    extra: { ...alerts[0].extra, name: '<img src=x onerror=alert(1)>' } }])}&t=${b64(tokens)}`);
+  const injected = page.locator('#card-901');
+  assert((await injected.locator('.alert-title').textContent()).includes('<img'),
+    'the raw name is shown as TEXT');
+  assert((await injected.locator('img').count()) === 0,
+    'a name carrying markup does not become an element');
+
   // ---- delete -----------------------------------------------------------
   await card.locator('.btn-delete').click();
   await page.waitForFunction(() => window.__sent.length > 0);
