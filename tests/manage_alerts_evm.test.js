@@ -19,7 +19,9 @@ const alerts = [
   },
 ];
 
-const b64 = (value) => Buffer.from(JSON.stringify(value)).toString('base64');
+// The bot appends `d`/`t` through a URL builder, so they arrive percent-encoded:
+// raw standard base64 contains `+`, which URLSearchParams would read as a space.
+const b64 = (value) => encodeURIComponent(Buffer.from(JSON.stringify(value)).toString('base64'));
 const url = `file://${path}?d=${b64(alerts)}&t=${b64(tokens)}`;
 
 const assert = (cond, msg) => {

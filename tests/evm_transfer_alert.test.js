@@ -10,7 +10,10 @@ const tokens = [
   { token_address: WHYPE, symbol: 'WHYPE', decimals: 18, price_usd: 42.11 },
   { token_address: NOPRICE, symbol: 'NOPRICE', decimals: 18, price_usd: null },
 ];
-const t = Buffer.from(JSON.stringify(tokens)).toString('base64');
+// The bot appends `t` through a URL builder, so it arrives percent-encoded:
+// raw standard base64 contains `+`, which URLSearchParams would read as a space.
+const b64 = (value) => encodeURIComponent(Buffer.from(JSON.stringify(value)).toString('base64'));
+const t = b64(tokens);
 
 const assert = (cond, msg) => { if (!cond) { console.error('FAIL: ' + msg); process.exitCode = 1; } else { console.log('pass: ' + msg); } };
 
@@ -52,7 +55,7 @@ const assert = (cond, msg) => { if (!cond) { console.error('FAIL: ' + msg); proc
   // 4. Happy path: wallet + OUT + all tokens + $1000 (the pre-filled default).
   //    Reloaded with a fully-priced watchlist: with an unpriced token in scope a
   //    USD threshold is (correctly) refused, which case 5 covers.
-  await page.goto(`file://${path}?t=${Buffer.from(JSON.stringify([tokens[0]])).toString('base64')}`);
+  await page.goto(`file://${path}?t=${b64([tokens[0]])}`);
   await page.fill('#address', WALLET.toUpperCase().replace('0X', '0x'));
   await page.click('#directionControl .segment-option[data-value="OUT"]');
   await page.click('#submitBtn');
