@@ -208,6 +208,12 @@
             --card-accent-bg: rgba(26, 188, 156, 0.14);
             --card-accent-bg-hover: rgba(26, 188, 156, 0.24);
         }
+        /* HyperEVM Transfer – indigo */
+        .card--evm-transfer {
+            --card-accent: #6c5ce7;
+            --card-accent-bg: rgba(108, 92, 231, 0.14);
+            --card-accent-bg-hover: rgba(108, 92, 231, 0.24);
+        }
         /* Verified Signal – emerald */
         .card--verified-signal {
             --card-accent: #27ae60;
@@ -316,6 +322,13 @@
                 <span class="alert-title">Spot Transfer Alert</span>
             </a>
 
+            <a id="evm-transfer-alert-link" href="evm_transfer_alert.html" class="alert-card card--evm-transfer">
+                <div class="alert-icon-wrap">
+                    <span class="alert-icon">🔗</span>
+                </div>
+                <span class="alert-title">HyperEVM Transfer Alert</span>
+            </a>
+
             <a id="verified-signal-alert-link" href="verified_signal_alert.html" class="alert-card card--verified-signal">
                 <div class="alert-icon-wrap">
                     <span class="alert-icon">✅</span>
@@ -368,6 +381,18 @@
             const vsLink = document.getElementById('verified-signal-alert-link');
             if (vsLink) {
                 vsLink.href = `verified_signal_alert.html?vs=${vs}`;
+            }
+        }
+
+        // Forward the collected HyperEVM token list to the evm_transfer_alert page.
+        // That list is not public (it is the hl_evm_watched_tokens watchlist behind
+        // bl-alert-manager's bearer auth), so bl-telegram-bot fetches it server-side
+        // and puts it on this URL as base64 JSON — the page has no other source.
+        const evmTokens = params.get('t');
+        if (evmTokens !== null) {
+            const evmLink = document.getElementById('evm-transfer-alert-link');
+            if (evmLink) {
+                evmLink.href = `evm_transfer_alert.html?t=${encodeURIComponent(evmTokens)}`;
             }
         }
     </script>

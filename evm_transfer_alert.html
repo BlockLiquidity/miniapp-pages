@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HyperEVM Transfer Alert</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #0f0f13);
+            color: var(--tg-theme-text-color, #ffffff);
+            padding: 16px 16px 48px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ── Back button ── */
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--tg-theme-button-color, #1abc9c);
+            text-decoration: none;
+            font-size: 15px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            -webkit-tap-highlight-color: transparent;
+            transition: opacity 0.15s ease;
+        }
+
+        .back-button:hover {
+            opacity: 0.75;
+        }
+
+        /* ── Hero section ── */
+        .hero {
+            background-color: var(--tg-theme-secondary-bg-color, #1c1c22);
+            border-radius: 18px;
+            padding: 24px 20px 22px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Teal accent top bar matching the card--new-trade colour */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 20px;
+            right: 20px;
+            height: 2px;
+            border-radius: 0 0 2px 2px;
+            background: #1abc9c;
+            opacity: 0.85;
+        }
+
+        .hero-icon-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .hero-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 13px;
+            background: rgba(26, 188, 156, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .hero-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .hero-title {
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            color: var(--tg-theme-text-color, #ffffff);
+        }
+
+        .hero-subtitle {
+            font-size: 13px;
+            color: var(--tg-theme-hint-color, #888);
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        .hero-description {
+            font-size: 14px;
+            color: var(--tg-theme-text-color, #d0d0d8);
+            line-height: 1.6;
+            margin-bottom: 16px;
+            opacity: 0.85;
+        }
+
+        /* ── How it works pills ── */
+        .how-it-works {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .step-pill {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: rgba(26, 188, 156, 0.08);
+            border: 1px solid rgba(26, 188, 156, 0.18);
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .step-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(26, 188, 156, 0.3);
+            color: #1abc9c;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .step-text {
+            font-size: 13px;
+            color: var(--tg-theme-text-color, #c8c8d0);
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+
+        /* ── Form card ── */
+        .form-card {
+            background-color: var(--tg-theme-secondary-bg-color, #1c1c22);
+            border-radius: 18px;
+            padding: 22px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .form-card-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--tg-theme-hint-color, #888);
+            margin-bottom: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--tg-theme-text-color, #ffffff);
+        }
+
+        .badge-optional {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--tg-theme-hint-color, #888);
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 5px;
+            padding: 2px 7px;
+            letter-spacing: 0.3px;
+        }
+
+        .field-hint {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #888);
+            margin-bottom: 8px;
+            line-height: 1.45;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            background-color: var(--tg-theme-bg-color, #0f0f13);
+            color: var(--tg-theme-text-color, #ffffff);
+            outline: none;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--tg-theme-hint-color, #555);
+        }
+
+        input[type="text"]:focus {
+            border-color: #1abc9c;
+            box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.15);
+        }
+
+        .error-message {
+            display: none;
+            color: #ff5f57;
+            font-size: 12px;
+            margin-top: 6px;
+            padding: 7px 10px;
+            background: rgba(255, 95, 87, 0.1);
+            border-radius: 7px;
+            border-left: 3px solid #ff5f57;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* ── Divider ── */
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.07);
+            margin: 20px 0;
+        }
+
+        /* ── Submit button ── */
+        .submit-btn {
+            width: 100%;
+            padding: 15px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%);
+            color: #ffffff;
+            cursor: pointer;
+            transition: opacity 0.2s ease, transform 0.15s ease;
+            margin-top: 20px;
+            letter-spacing: 0.1px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+            opacity: 1;
+        }
+
+        /* ── Example address chip ── */
+        .example-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--tg-theme-hint-color, #888);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 4px 9px;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .example-chip:hover {
+            background: rgba(26, 188, 156, 0.12);
+            color: #1abc9c;
+            border-color: rgba(26, 188, 156, 0.25);
+        }
+
+        .example-chip-label {
+            color: #1abc9c;
+            font-weight: 600;
+        }
+
+        /* ── Token picker action links ── */
+        .action-links {
+            font-size: 13px;
+        }
+
+        .action-link {
+            color: #1abc9c;
+            cursor: pointer;
+            margin-left: 14px;
+            text-decoration: none;
+            font-weight: 600;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Token filter: "all tokens" toggle ── */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background-color: var(--tg-theme-bg-color, #0f0f13);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .toggle-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+            accent-color: #1abc9c;
+            cursor: pointer;
+        }
+
+        .toggle-row label {
+            margin: 0;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* ── Selected token chips ── */
+        .selected-chips-area {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+            min-height: 0;
+        }
+
+        .selected-chip {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(26, 188, 156, 0.15);
+            border: 1px solid rgba(26, 188, 156, 0.3);
+            color: #1abc9c;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            user-select: none;
+            max-width: 100%;
+        }
+
+        .selected-chip .remove-btn {
+            margin-left: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        .selected-chip .remove-btn:hover {
+            opacity: 1;
+        }
+
+        .selected-chip.all-selected {
+            background: rgba(26, 188, 156, 0.2);
+            width: 100%;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        /* ── Token search dropdown ── */
+        .search-wrapper {
+            position: relative;
+        }
+
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--tg-theme-secondary-bg-color, #1c1c22);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            display: none;
+            margin-top: 6px;
+        }
+
+        .dropdown-list.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 12px 14px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            font-size: 15px;
+        }
+
+        .dropdown-item:hover {
+            background-color: rgba(26, 188, 156, 0.12);
+        }
+
+        .dropdown-item.no-results {
+            color: var(--tg-theme-hint-color, #888);
+            cursor: default;
+            text-align: center;
+        }
+
+        .loading-spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-top-color: #1abc9c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* ── Direction / threshold-unit segmented controls ── */
+        .segmented-control {
+            display: flex;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .segment-option {
+            flex: 1;
+            text-align: center;
+            padding: 9px 6px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 7px;
+            cursor: pointer;
+            color: var(--tg-theme-hint-color, #9aa0a6);
+            transition: background 0.18s ease, color 0.18s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .segment-option.active {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+        }
+
+        /* The boundary of what a log-based collector can see. Stated up front,
+           because a user who expects native HYPE would read the silence as a bug. */
+        .coverage-notice {
+            margin-top: 14px;
+            padding: 11px 13px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--tg-theme-hint-color, #9aa0a6);
+            background: rgba(245, 166, 35, 0.10);
+            border: 1px solid rgba(245, 166, 35, 0.28);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <a href="index.html" class="back-button">&#8592; Back to Home</a>
+
+        <!-- Hero / description section -->
+        <div class="hero">
+            <div class="hero-icon-row">
+                <div class="hero-icon-wrap">
+                    <span class="hero-icon">&#128279;</span>
+                </div>
+                <div>
+                    <div class="hero-title">HyperEVM Transfer Alert</div>
+                    <div class="hero-subtitle">ERC-20 token movement tracker</div>
+                </div>
+            </div>
+
+            <p class="hero-description">
+                Get notified when ERC-20 tokens move on HyperEVM. Watch a specific wallet, watch a
+                token wherever it moves, or both.
+            </p>
+
+            <div class="how-it-works">
+                <div class="step-pill">
+                    <div class="step-num">1</div>
+                    <div class="step-text">Enter the wallet to watch &mdash; or leave it blank to watch a token wherever it moves.</div>
+                </div>
+                <div class="step-pill">
+                    <div class="step-num">2</div>
+                    <div class="step-text">Pick which tokens to cover (up to 20) from the collected list.</div>
+                </div>
+                <div class="step-pill">
+                    <div class="step-num">3</div>
+                    <div class="step-text">Set a minimum size so only the transfers you care about reach you.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form card -->
+        <div class="form-card">
+            <div class="form-card-title">Alert Configuration</div>
+
+            <form id="configForm">
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="address">Wallet Address</label>
+                        <span class="badge-optional">Optional</span>
+                    </div>
+                    <p class="field-hint">The HyperEVM wallet to watch. Leave it blank to be alerted on every transfer of the tokens you pick below, whoever moves them.</p>
+                    <input
+                        type="text"
+                        id="address"
+                        name="address"
+                        placeholder="0x1234...abcd"
+                        autocomplete="off"
+                        autocorrect="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                    >
+                    <div class="error-message" id="addressError"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="name">Display Name</label>
+                        <span class="badge-optional">Optional</span>
+                    </div>
+                    <p class="field-hint">A short label for this subscription (e.g. "Whale #1"), shown in your alert list.</p>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="e.g. Whale #1"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <!-- Direction only means anything relative to a wallet, so it is
+                     hidden entirely for a token-only subscription. -->
+                <div id="directionSection">
+                    <div class="divider"></div>
+
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label>Direction</label>
+                        </div>
+                        <p class="field-hint">Which side of the transfer your wallet has to be on.</p>
+                        <div class="segmented-control" id="directionControl">
+                            <div class="segment-option" data-value="IN">&#128229; Incoming</div>
+                            <div class="segment-option" data-value="OUT">&#128228; Outgoing</div>
+                            <div class="segment-option active" data-value="BOTH">&#8596;&#65039; Both</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Token scope: all collected tokens, or a specific set -->
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="allTokensToggle">Token Scope</label>
+                    </div>
+                    <p class="field-hint">Only tokens we collect can be subscribed to. Turn this off to narrow the alert to specific tokens (max 20).</p>
+                    <div class="toggle-row">
+                        <input type="checkbox" id="allTokensToggle" checked>
+                        <label for="allTokensToggle">Alert on all collected tokens</label>
+                    </div>
+                    <!-- Lives OUTSIDE the picker below, which is hidden while
+                         "all collected tokens" is on — an error the user cannot
+                         see is the same as no error at all. -->
+                    <div class="error-message" id="scopeError"></div>
+                </div>
+
+                <!-- Specific-token picker, shown only when "all tokens" is off -->
+                <div class="form-group hidden" id="tokenPickerGroup">
+                    <div class="label-row">
+                        <label>Select Tokens</label>
+                        <div class="action-links">
+                            <span class="action-link" id="clearAllBtn">Clear All</span>
+                        </div>
+                    </div>
+
+                    <div class="selected-chips-area" id="selectedChipsArea"></div>
+
+                    <div class="search-wrapper">
+                        <input type="text" id="tokenSearch" placeholder="Search a collected token (e.g. WHYPE)..." autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+                        <div id="dropdownList" class="dropdown-list"></div>
+                    </div>
+
+                    <div class="error-message" id="tokensError"></div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label>Minimum Size</label>
+                    </div>
+                    <p class="field-hint">Transfers at or above this size alert you. Choose USD, or the token's own units when we have no USD price for it.</p>
+                    <div class="segmented-control" id="unitControl">
+                        <div class="segment-option active" data-value="usd">USD value</div>
+                        <div class="segment-option" data-value="amount">Token amount</div>
+                    </div>
+                    <input
+                        type="text"
+                        inputmode="decimal"
+                        id="threshold"
+                        name="threshold"
+                        placeholder="1000"
+                        value="1000"
+                        autocomplete="off"
+                    >
+                    <div class="error-message" id="thresholdError"></div>
+                </div>
+
+                <div class="coverage-notice">
+                    &#8505;&#65039; Native HYPE transfers are not covered &mdash; only ERC-20 token transfers.
+                </div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">Save Alert</button>
+
+            </form>
+        </div>
+
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp || {
+            expand: () => {},
+            ready: () => {},
+            sendData: (data) => console.log('Would send to Telegram:', data),
+            initDataUnsafe: {},
+            MainButton: { hide: () => {} },
+            HapticFeedback: { impactOccurred: () => {}, notificationOccurred: () => {} }
+        };
+
+        tg.ready();
+        tg.expand();
+        tg.MainButton.hide();
+
+        // The API refuses a subscription covering more than 20 tokens, so the
+        // picker refuses it first — a 422 after the submit is a worse way to
+        // learn it.
+        const MAX_TOKENS = 20;
+
+        // ── The collected-token list ────────────────────────────────────────
+        // Unlike the Hyperliquid pages, this list is NOT public: it is the
+        // `hl_evm_watched_tokens` watchlist, read by bl-telegram-bot from
+        // bl-alert-manager (which needs a bearer token this static page cannot
+        // hold) and handed over in the `t` query parameter as base64 JSON — the
+        // same way manage_alerts.html is handed the user's alerts in `d`.
+        // Rows look like:
+        //   {"token_address":"0x5555…","symbol":"WHYPE","decimals":18,"price_usd":42.11}
+        // `price_usd: null` is load-bearing: a USD threshold on such a token is
+        // rejected by the API, so the picker says so before the user types one.
+        function loadCollectedTokens() {
+            try {
+                const encoded = new URLSearchParams(window.location.search).get('t');
+                if (!encoded) return [];
+                const parsed = JSON.parse(atob(encoded));
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.error('Failed to parse the collected-token list:', e);
+                return [];
+            }
+        }
+
+        const state = {
+            allTokens: loadCollectedTokens(),
+            // Token CONTRACT ADDRESSES, not symbols: symbols are not unique on an
+            // EVM chain, and the transfer rows carry only the address.
+            selectedTokens: new Set(),
+            direction: 'BOTH',
+            unit: 'usd'
+        };
+
+        // Elements
+        const form              = document.getElementById('configForm');
+        const addressInput      = document.getElementById('address');
+        const nameInput         = document.getElementById('name');
+        const addressError      = document.getElementById('addressError');
+        const directionSection  = document.getElementById('directionSection');
+        const directionControl  = document.getElementById('directionControl');
+        const unitControl       = document.getElementById('unitControl');
+        const thresholdInput    = document.getElementById('threshold');
+        const thresholdError    = document.getElementById('thresholdError');
+        const allTokensToggle   = document.getElementById('allTokensToggle');
+        const tokenPickerGroup  = document.getElementById('tokenPickerGroup');
+        const tokenSearchInput  = document.getElementById('tokenSearch');
+        const dropdownList      = document.getElementById('dropdownList');
+        const selectedChipsArea = document.getElementById('selectedChipsArea');
+        const clearAllBtn       = document.getElementById('clearAllBtn');
+        const tokensError       = document.getElementById('tokensError');
+        const scopeError        = document.getElementById('scopeError');
+
+        function tokenByAddress(address) {
+            return state.allTokens.find(t => t.token_address === address);
+        }
+
+        function symbolOf(address) {
+            const token = tokenByAddress(address);
+            return token ? token.symbol : address;
+        }
+
+        // ── Segmented controls ──────────────────────────────────────────────
+        function wireSegments(control, onPick) {
+            control.querySelectorAll('.segment-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    control.querySelectorAll('.segment-option').forEach(o => o.classList.remove('active'));
+                    option.classList.add('active');
+                    tg.HapticFeedback?.impactOccurred('light');
+                    onPick(option.dataset.value);
+                });
+            });
+        }
+
+        wireSegments(directionControl, (value) => { state.direction = value; });
+        wireSegments(unitControl, (value) => {
+            state.unit = value;
+            thresholdInput.placeholder = value === 'usd' ? '1000' : '250';
+            thresholdError.classList.remove('show');
+        });
+
+        // Direction is meaningless without a wallet — the API ignores it, so the
+        // form must not pretend otherwise.
+        function syncDirectionVisibility() {
+            const hasAddress = addressInput.value.trim().length > 0;
+            directionSection.classList.toggle('hidden', !hasAddress);
+        }
+        addressInput.addEventListener('input', syncDirectionVisibility);
+
+        // ── Token picker ────────────────────────────────────────────────────
+        function syncPickerVisibility() {
+            tokenPickerGroup.classList.toggle('hidden', allTokensToggle.checked);
+            scopeError.classList.remove('show');
+            if (allTokensToggle.checked) {
+                tokensError.classList.remove('show');
+            } else {
+                renderDropdown();
+            }
+        }
+        allTokensToggle.addEventListener('change', syncPickerVisibility);
+
+        function renderDropdown(filterText = '') {
+            dropdownList.innerHTML = '';
+
+            const query = filterText.toLowerCase();
+            const filtered = state.allTokens.filter(token =>
+                !state.selectedTokens.has(token.token_address) &&
+                (token.symbol.toLowerCase().includes(query) ||
+                 token.token_address.toLowerCase().includes(query))
+            );
+
+            if (filtered.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'dropdown-item no-results';
+                noResult.textContent = state.allTokens.length === 0
+                    ? 'No tokens are collected yet — open this page from the bot menu.'
+                    : (query ? 'No tokens found' : 'All collected tokens selected');
+                dropdownList.appendChild(noResult);
+                return;
+            }
+
+            filtered.forEach(token => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                // Name the price gap here: it is what decides whether a USD
+                // threshold on this token can be evaluated at all.
+                item.textContent = token.price_usd === null || token.price_usd === undefined
+                    ? `${token.symbol} — no USD price`
+                    : token.symbol;
+                item.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    addToken(token.token_address);
+                });
+                dropdownList.appendChild(item);
+            });
+        }
+
+        function renderSelectedChips() {
+            selectedChipsArea.innerHTML = '';
+            state.selectedTokens.forEach(address => {
+                const chip = document.createElement('div');
+                chip.className = 'selected-chip';
+                const label = document.createTextNode(symbolOf(address) + ' ');
+                const removeBtn = document.createElement('span');
+                removeBtn.className = 'remove-btn';
+                removeBtn.innerHTML = '&times;';
+                removeBtn.addEventListener('click', () => removeToken(address));
+                chip.appendChild(label);
+                chip.appendChild(removeBtn);
+                selectedChipsArea.appendChild(chip);
+            });
+        }
+
+        function addToken(address) {
+            if (state.selectedTokens.size >= MAX_TOKENS) {
+                tokensError.textContent = `A subscription may cover at most ${MAX_TOKENS} tokens.`;
+                tokensError.classList.add('show');
+                return;
+            }
+            state.selectedTokens.add(address);
+            tokenSearchInput.value = '';
+            renderSelectedChips();
+            renderDropdown();
+            dropdownList.classList.remove('show');
+            tokensError.classList.remove('show');
+        }
+
+        function removeToken(address) {
+            state.selectedTokens.delete(address);
+            renderSelectedChips();
+            renderDropdown();
+        }
+
+        clearAllBtn.addEventListener('click', () => {
+            state.selectedTokens.clear();
+            renderSelectedChips();
+            renderDropdown();
+        });
+
+        tokenSearchInput.addEventListener('input', (e) => {
+            renderDropdown(e.target.value);
+            dropdownList.classList.add('show');
+        });
+
+        tokenSearchInput.addEventListener('focus', () => {
+            renderDropdown(tokenSearchInput.value);
+            dropdownList.classList.add('show');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-wrapper')) {
+                dropdownList.classList.remove('show');
+            }
+        });
+
+        // ── Validation ──────────────────────────────────────────────────────
+        function parseInput(value) {
+            if (!value) return NaN;
+            return parseFloat(String(value).replace(/,/g, '.'));
+        }
+
+        /** The tokens this subscription will actually be evaluated against. */
+        function coveredTokens() {
+            return allTokensToggle.checked
+                ? state.allTokens
+                : Array.from(state.selectedTokens).map(tokenByAddress).filter(Boolean);
+        }
+
+        function validateForm() {
+            let isValid = true;
+            [addressError, tokensError, scopeError, thresholdError].forEach(el => el.classList.remove('show'));
+
+            const address = addressInput.value.trim();
+            if (address && !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+                addressError.textContent = 'Enter a valid HyperEVM address (0x followed by 40 hex characters), or leave it blank.';
+                addressError.classList.add('show');
+                isValid = false;
+            }
+
+            if (!allTokensToggle.checked && state.selectedTokens.size === 0) {
+                tokensError.textContent = 'Select at least one token, or turn "Alert on all collected tokens" back on.';
+                tokensError.classList.add('show');
+                isValid = false;
+            }
+
+            // The API rejects "no wallet + all tokens" outright: it would fire on
+            // every transfer of every collected token.
+            if (!address && allTokensToggle.checked) {
+                scopeError.textContent = 'Without a wallet address you must name at least one token.';
+                scopeError.classList.add('show');
+                isValid = false;
+            }
+
+            const threshold = parseInput(thresholdInput.value);
+            if (thresholdInput.value.trim() === '' || isNaN(threshold) || threshold < 0) {
+                thresholdError.textContent = 'Enter a number of 0 or more (0 alerts on every transfer).';
+                thresholdError.classList.add('show');
+                isValid = false;
+            } else if (state.unit === 'usd' && threshold > 0) {
+                // A USD threshold cannot be evaluated for a token we have no
+                // price for, so the API refuses it. Say which token, here, while
+                // the user can still act on it.
+                const unpriced = coveredTokens().find(t => t.price_usd === null || t.price_usd === undefined);
+                if (unpriced) {
+                    thresholdError.textContent = `No USD price is available for ${unpriced.symbol}; use a token-amount threshold instead.`;
+                    thresholdError.classList.add('show');
+                    isValid = false;
+                }
+            }
+
+            return isValid;
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            if (!validateForm()) {
+                tg.HapticFeedback?.notificationOccurred('error');
+                return;
+            }
+            tg.HapticFeedback?.notificationOccurred('success');
+
+            // Wire format expected by bl-telegram-bot's EvmTransferParams:
+            //   - address   omitted entirely for a token-only subscription
+            //   - tokens    "ALL_TOKEN" (string) or an array of token ADDRESSES
+            //   - min_usd   REPLACES min_amount; never send both
+            const formData = {
+                tokens: allTokensToggle.checked ? "ALL_TOKEN" : Array.from(state.selectedTokens)
+            };
+
+            const address = addressInput.value.trim();
+            if (address) {
+                formData.address = address.toLowerCase();
+                formData.direction = state.direction;
+            }
+
+            const name = nameInput.value.trim();
+            if (name) {
+                formData.name = name;
+            }
+
+            const threshold = parseInput(thresholdInput.value);
+            if (state.unit === 'usd' && threshold > 0) {
+                formData.min_usd = threshold;
+            } else {
+                formData.min_amount = threshold;
+            }
+
+            try {
+                const jsonData = JSON.stringify({
+                    type: "evm_transfer",
+                    data: formData
+                });
+
+                tg.sendData(jsonData);
+
+                if (!tg.initDataUnsafe.user) {
+                    console.log('OUTPUT DATA:', jsonData);
+                    alert('Alert saved! Check the console for the payload.');
+                }
+            } catch (error) {
+                console.error('Error sending data:', error);
+            }
+        });
+
+        // Initial render: no wallet typed yet, so no direction control; "all
+        // collected tokens" on, so no picker.
+        syncDirectionVisibility();
+        syncPickerVisibility();
+        renderSelectedChips();
+    </script>
+</body>
+</html>

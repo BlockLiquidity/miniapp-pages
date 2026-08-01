@@ -1,0 +1,12 @@
+{
+  "name": "miniapp-pages",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Static Telegram mini-app pages for BlockLiquidity. The package manifest exists only for the headless page tests — the site itself has no build step.",
+  "scripts": {
+    "test": "node tests/evm_transfer_alert.test.js && node tests/manage_alerts_evm.test.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}

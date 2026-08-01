@@ -525,6 +525,7 @@
             { id: 6,  label: "Surge",          icon: "🚀" },
             { id: 7,  label: "Spot Transfer",  icon: "🔄" },
             { id: 8,  label: "Direction",       icon: "🎯" },
+            { id: 11, label: "HyperEVM Transfer", icon: "🔗" },
             { id: 15, label: "Hedge Fund Verified Signal", icon: "✅" },
             { id: 0,  label: "New Token",      icon: "✨" },
         ];
@@ -543,12 +544,59 @@
             { kind: 7,  label: "Spot Transfer" },
             { kind: 8,  label: "Trade Direction" },
             { kind: 9,  label: "New Trade" },
+            { kind: 11, label: "HyperEVM Transfer" },
             { kind: 0,  label: "New Token" },
             { kind: 15, label: "Verified Signal" },
         ];
 
         let allAlerts = [];
         let currentKind = -1;
+
+        // The API refuses a kind-11 subscription covering more than 20 tokens.
+        const EVM_MAX_TOKENS = 20;
+
+        // ── The collected HyperEVM token list (kind 11) ─────────────────────
+        // Not public: it is the `hl_evm_watched_tokens` watchlist behind
+        // bl-alert-manager's bearer auth, so bl-telegram-bot reads it
+        // server-side and hands it over in `t` as base64 JSON — the same way
+        // the alerts themselves arrive in `d`.
+        let evmTokens = [];
+
+        function getEvmTokens() {
+            try {
+                const encoded = new URLSearchParams(window.location.search).get('t');
+                if (!encoded) return [];
+                const parsed = JSON.parse(atob(encoded));
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.error('Failed to parse the collected-token list:', e);
+                return [];
+            }
+        }
+
+        /// `formatAlert` returns plain text — never markup — but some of that text is
+        /// user-supplied (an alert's custom `name`, an address typed into another
+        /// client) and it is interpolated into `innerHTML` below. Escape at the one
+        /// point where text becomes HTML.
+        function esc(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function shortAddress(address) {
+            return address.length > 10
+                ? `${address.slice(0, 6)}…${address.slice(-4)}`
+                : address;
+        }
+
+        function evmSymbolOf(address) {
+            const token = evmTokens.find(t => t.token_address.toLowerCase() === String(address).toLowerCase());
+            return token ? token.symbol : shortAddress(String(address));
+        }
 
         function getAlerts() {
             try {
@@ -627,6 +675,22 @@
                         detail: name ? addr : (addr ? addr.substring(0, 16) + '...' : '')
                     };
                 }
+                case 11: {
+                    // `tokens` holds token CONTRACT ADDRESSES, not symbols — symbols
+                    // are not unique on an EVM chain. Resolve them back through the
+                    // collected-token list the bot handed us, falling back to a
+                    // shortened address for anything that left the watchlist.
+                    const parts = [];
+                    if (ex.address) parts.push(shortAddress(ex.address) + ' · ' + (ex.direction || 'BOTH'));
+                    else parts.push('any wallet');
+                    parts.push(Array.isArray(ex.tokens) && ex.tokens.length
+                        ? ex.tokens.map(evmSymbolOf).join(', ')
+                        : 'all collected tokens');
+                    if (ex.min_usd) parts.push(`min $${ex.min_usd}`);
+                    else if (ex.min_amount) parts.push(`min ${ex.min_amount} tokens`);
+                    else parts.push('every transfer');
+                    return { title: ex.name || "HyperEVM Transfer", detail: parts.join(' · ') };
+                }
                 case 15:
                     return { title: "Hedge Fund Verified Signal", detail: "Notify on verified hedge-fund signals" };
                 default:
@@ -659,13 +723,13 @@
                 const { title, detail } = formatAlert(alert);
                 const icon = ICON_MAP[alert.kind] || '🔔';
                 return `
-                <div class="alert-card" id="card-${alert.id}">
+                <div class="alert-card" id="card-${esc(alert.id)}">
                     <div class="alert-icon-badge">${icon}</div>
                     <div class="alert-body">
-                        <div class="alert-title">${title}</div>
-                        <div class="alert-detail">${detail}</div>
+                        <div class="alert-title">${esc(title)}</div>
+                        <div class="alert-detail">${esc(detail)}</div>
                     </div>
-                    <button class="btn-delete" onclick="deleteAlert('${alert.id}', this)" aria-label="Delete alert">
+                    <button class="btn-delete" onclick="deleteAlert('${esc(alert.id)}', this)" aria-label="Delete alert">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
@@ -849,6 +913,34 @@
                             <input type="text" id="fAddress" placeholder="0x…"></div>
                         <div class="form-group"><label>Name (optional)</label>
                             <input type="text" id="fName" placeholder="e.g. Whale"></div>`;
+                case 11:
+                    return `
+                        <div class="form-group"><label>Wallet Address (optional)</label>
+                            <input type="text" id="fAddress" placeholder="0x… (blank = watch the tokens instead)">
+                            <div class="hint-text">Leave blank to be alerted on every transfer of the tokens below, whoever moves them.</div></div>
+                        <div class="form-group"><label>Name (optional)</label>
+                            <input type="text" id="fName" placeholder="e.g. Whale #1"></div>
+                        <div class="form-group"><label>Direction</label>
+                            <div class="segmented-control" data-group="evmdir">
+                                <div class="segment-option" data-seg="IN">Incoming</div>
+                                <div class="segment-option" data-seg="OUT">Outgoing</div>
+                                <div class="segment-option active" data-seg="BOTH">Both</div>
+                            </div>
+                            <div class="hint-text">Only applies when a wallet address is given.</div></div>
+                        <div class="form-group"><label>Tokens</label>
+                            <div class="segmented-control" data-group="evmtokens">
+                                <div class="segment-option active" data-seg="all">All collected</div>
+                                <div class="segment-option" data-seg="specific">Specific</div>
+                            </div>
+                            <div id="evmTokens" style="display:none">${tokenPickerHtml()}</div>
+                            <div class="hint-text">Only tokens we collect can be subscribed to (max ${EVM_MAX_TOKENS}).</div></div>
+                        <div class="form-group"><label>Minimum Size</label>
+                            <div class="segmented-control" data-group="evmunit">
+                                <div class="segment-option active" data-seg="usd">USD value</div>
+                                <div class="segment-option" data-seg="amount">Token amount</div>
+                            </div>
+                            <input type="text" inputmode="decimal" id="fThreshold" placeholder="1000" value="1000">
+                            <div class="hint-text">Native HYPE transfers are not covered — only ERC-20 token transfers.</div></div>`;
                 case 0:
                 case 15:
                     return toggleFormHtml(kind);
@@ -898,6 +990,11 @@
             if ([1, 4, 5, 6].includes(kind)) setupTokenPicker(false);
             if (kind === 3) setupTokenPicker(true);
             if (kind === 2) setupTokenPicker(true); // picker lives inside #liqTokens
+            // Kind 11 submits token ADDRESSES but shows SYMBOLS, so it drives the
+            // picker off the collected-token list rather than the HL universe.
+            if (kind === 11) {
+                setupTokenPicker(true, evmTokens.map(t => ({ value: t.token_address, label: t.symbol })));
+            }
             modalBody.scrollTop = 0;
 
             document.getElementById('createSubmit').addEventListener('click', () => submitCreate(kind));
@@ -936,25 +1033,36 @@
                 document.getElementById('liqTokens').style.display = (val === 'specific') ? 'block' : 'none';
             } else if (group === 'liqsize') {
                 document.getElementById('fSize').style.display = (val === 'custom') ? 'block' : 'none';
+            } else if (group === 'evmtokens') {
+                document.getElementById('evmTokens').style.display = (val === 'specific') ? 'block' : 'none';
+            } else if (group === 'evmunit') {
+                document.getElementById('fThreshold').placeholder = (val === 'usd') ? '1000' : '250';
             }
         }
 
-        function setupTokenPicker(multi) {
+        // `options` is null for the Hyperliquid pages (a lazily-fetched flat list of
+        // coin symbols, where the label IS the submitted value) and an array of
+        // {value,label} for HyperEVM, where the submitted value is a token CONTRACT
+        // ADDRESS but the user only ever sees the symbol.
+        function setupTokenPicker(multi, options) {
             const search = document.getElementById('tpSearch');
             const dropdown = document.getElementById('tpDropdown');
             const chips = document.getElementById('tpChips');
             if (!search || !dropdown || !chips) return;
 
+            const labelOf = (value) =>
+                options ? ((options.find(o => o.value === value) || {}).label || value) : value;
+
             function renderChips() {
                 if (multi) {
                     chips.innerHTML = [...createState.tokens].map(t =>
-                        `<span class="tp-chip">${t}<span class="tp-x" data-t="${t}">&times;</span></span>`).join('');
+                        `<span class="tp-chip">${labelOf(t)}<span class="tp-x" data-t="${t}">&times;</span></span>`).join('');
                     chips.querySelectorAll('.tp-x').forEach(x =>
                         x.addEventListener('click', () => { createState.tokens.delete(x.dataset.t); renderChips(); }));
                     search.style.display = 'block';
                 } else {
                     if (createState.singleToken) {
-                        chips.innerHTML = `<span class="tp-chip">${createState.singleToken}<span class="tp-x">&times;</span></span>`;
+                        chips.innerHTML = `<span class="tp-chip">${labelOf(createState.singleToken)}<span class="tp-x">&times;</span></span>`;
                         chips.querySelector('.tp-x').addEventListener('click', () => { createState.singleToken = null; renderChips(); });
                         search.style.display = 'none';
                     } else {
@@ -967,11 +1075,15 @@
 
             function renderDropdown(q) {
                 const query = (q || '').toLowerCase();
-                const matches = (tokenList || []).filter(t => t.toLowerCase().includes(query)).slice(0, 50);
+                const source = options || (tokenList || []).map(t => ({ value: t, label: t }));
+                const matches = source.filter(o => o.label.toLowerCase().includes(query)).slice(0, 50);
                 if (!matches.length) {
-                    dropdown.innerHTML = `<div class="tp-item tp-empty">${tokenList ? 'No tokens found' : 'Loading tokens…'}</div>`;
+                    const empty = options
+                        ? (options.length ? 'No tokens found' : 'No tokens are collected yet')
+                        : (tokenList ? 'No tokens found' : 'Loading tokens…');
+                    dropdown.innerHTML = `<div class="tp-item tp-empty">${empty}</div>`;
                 } else {
-                    dropdown.innerHTML = matches.map(t => `<div class="tp-item" data-t="${t}">${t}</div>`).join('');
+                    dropdown.innerHTML = matches.map(o => `<div class="tp-item" data-t="${o.value}">${o.label}</div>`).join('');
                     dropdown.querySelectorAll('.tp-item[data-t]').forEach(it =>
                         it.addEventListener('mousedown', (e) => { e.preventDefault(); pick(it.dataset.t); }));
                 }
@@ -997,7 +1109,11 @@
             search.addEventListener('focus', () => renderDropdown(search.value));
 
             renderChips();
-            ensureTokens().then(() => { if (document.activeElement === search) renderDropdown(search.value); });
+            // The HyperEVM list arrives with the page; only the Hyperliquid one
+            // has to be fetched.
+            if (!options) {
+                ensureTokens().then(() => { if (document.activeElement === search) renderDropdown(search.value); });
+            }
         }
 
         // Hide any open token dropdown when tapping elsewhere
@@ -1102,6 +1218,54 @@
                     if (name) data.name = name;
                     return { payload: { type: 'new_trade', data } };
                 }
+                case 11: {
+                    const address = val('fAddress');
+                    if (address && !isAddress(address)) return { error: 'Please enter a valid 0x… address' };
+
+                    const scope = createState.seg.evmtokens || 'all';
+                    let tokens;
+                    if (scope === 'all') {
+                        tokens = 'ALL_TOKEN';
+                        // "no wallet + all tokens" would fire on every transfer of
+                        // every collected token; the API rejects it outright.
+                        if (!address) return { error: 'Without a wallet address you must name at least one token' };
+                    } else {
+                        tokens = [...createState.tokens];
+                        if (!tokens.length) return { error: 'Please select at least one token' };
+                        if (tokens.length > EVM_MAX_TOKENS) {
+                            return { error: `A subscription may cover at most ${EVM_MAX_TOKENS} tokens` };
+                        }
+                    }
+
+                    const threshold = parseNum(val('fThreshold'));
+                    if (isNaN(threshold) || threshold < 0) return { error: 'Please enter a threshold of 0 or more' };
+
+                    const unit = createState.seg.evmunit || 'usd';
+                    if (unit === 'usd' && threshold > 0) {
+                        // A USD threshold cannot be evaluated for an unpriced token,
+                        // so the API refuses it — say which token, here.
+                        const covered = tokens === 'ALL_TOKEN'
+                            ? evmTokens
+                            : tokens.map(a => evmTokens.find(t => t.token_address === a)).filter(Boolean);
+                        const unpriced = covered.find(t => t.price_usd === null || t.price_usd === undefined);
+                        if (unpriced) {
+                            return { error: `No USD price is available for ${unpriced.symbol}; use a token-amount threshold instead` };
+                        }
+                    }
+
+                    const data = { tokens };
+                    if (address) {
+                        data.address = address.toLowerCase();
+                        data.direction = createState.seg.evmdir || 'BOTH';
+                    }
+                    const name = val('fName');
+                    if (name) data.name = name;
+                    // min_usd REPLACES min_amount — never send both.
+                    if (unit === 'usd' && threshold > 0) data.min_usd = threshold;
+                    else data.min_amount = threshold;
+
+                    return { payload: { type: 'evm_transfer', data } };
+                }
                 case 0: {
                     const subscribed = allAlerts.some(a => a.kind === 0);
                     return { payload: { type: subscribed ? 'unsub_new_token' : 'sub_new_token', data: {} } };
@@ -1137,6 +1301,7 @@
 
         // Init
         allAlerts = getAlerts();
+        evmTokens = getEvmTokens();
         renderTabs();
         renderAlerts();
     </script>

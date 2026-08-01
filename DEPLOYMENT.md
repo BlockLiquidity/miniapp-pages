@@ -27,6 +27,11 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
   (`tg.initDataUnsafe.user` is absent).
 - **Logs:** none server-side; use the browser console. Deploy logs are in the repo's
   GitHub **Actions** tab.
+- **Tests:** `npm install && npm test` — headless Playwright smoke tests
+  (`tests/*.test.js`) that drive the real pages in Chromium and assert the exact
+  `sendData` payload. They are a developer tool only; nothing in the deploy
+  pipeline runs them, and `package.json` / `node_modules` are not part of the
+  published site (`node_modules` is gitignored).
 
 ## How to deploy
 - **CI:** `.github/workflows/static.yml` — on every push to `main` (or manual
@@ -52,6 +57,20 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
   canonical Hyperliquid coin symbol from `token-fetcher.js` (perps bare e.g. `BTC`;
   HIP-3 perps namespaced e.g. `xyz:GOOGL`), because bl-notification-core filters
   alerts by an exact string match on `fill.coin`. Do not substitute display names.
+- **Not every picker can fetch its own list.** The Hyperliquid pages read their
+  token universe straight from the public HL info API (`token-fetcher.js`). The
+  **HyperEVM Transfer** page (`evm_transfer_alert.html`) cannot: its list is the
+  `hl_evm_watched_tokens` watchlist, which lives behind bl-alert-manager's bearer
+  auth, and this site holds no credentials. bl-telegram-bot therefore reads it
+  server-side and hands it over in the **`t` query parameter** as base64 JSON —
+  the same mechanism `manage_alerts.html` already uses for `d` (the user's
+  alerts). `index.html` forwards `t` on to the page. Opened without `t` (e.g.
+  straight from a browser) the picker is simply empty; the page still works for
+  an "all collected tokens" subscription and the API validates either way.
+- **kind 11 submits token ADDRESSES, not symbols.** Symbols are not unique on an
+  EVM chain and the transfer rows carry only `token_address`, so the picker shows
+  `WHYPE` but submits `0x5555…5555`. `min_usd` **replaces** `min_amount` — never
+  send both.
 - **`tokens` wire format is per-alert-kind.** The New Trade page (`new_trade_alert.html`)
   sends `tokens: "ALL_TOKEN"` (string) for all tokens or an array of exact symbols —
   matching bl-telegram-bot's `NewTradeParams`/`TokenFilter`. This is the **singular**
