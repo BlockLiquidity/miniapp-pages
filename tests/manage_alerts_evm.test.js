@@ -77,6 +77,9 @@ const assert = (cond, msg) => {
     'a name carrying markup does not become an element');
 
   // ---- delete -----------------------------------------------------------
+  // Back to the original fixture: the injection check above navigated away, and
+  // a Playwright locator re-resolves against whatever page is current.
+  await page.goto(url);
   await card.locator('.btn-delete').click();
   await page.waitForFunction(() => window.__sent.length > 0);
   let payload = JSON.parse((await page.evaluate(() => window.__sent))[0]);
@@ -93,11 +96,22 @@ const assert = (cond, msg) => {
   assert((await page.locator('#createError').textContent()).includes('at least one token'),
     'no-wallet + all-tokens is refused');
 
-  // A USD threshold over an unpriced token is refused, naming the token.
+  // An ALL_TOKEN USD threshold with an unpriced token in the watchlist is now a
+  // HINT, not a refusal — the API evaluates it against the priced subset, so
+  // blocking here would refuse what the server allows.
   await page.fill('#fAddress', WALLET);
+  assert((await page.locator('#evmUnpricedHint').textContent()).includes('NOPRICE'),
+    'the unpriced token is named as a hint under the threshold');
   await page.click('#createSubmit');
-  assert((await page.locator('#createError').textContent()).includes('NOPRICE'),
-    'a USD threshold covering an unpriced token is refused by name');
+  let submitted = JSON.parse((await page.evaluate(() => window.__sent)).pop());
+  assert(submitted.data.tokens === 'ALL_TOKEN' && submitted.data.min_usd === 1000,
+    'and the default ALL_TOKEN + $1000 form submits: ' + JSON.stringify(submitted.data));
+
+  // Re-open: submitting closed the sheet.
+  await page.goto(url);
+  await page.click('.fab-create');
+  await page.click('.type-card:has-text("HyperEVM Transfer")');
+  await page.fill('#fAddress', WALLET);
 
   // Narrow to the priced token and submit.
   await page.click('.segmented-control[data-group="evmtokens"] .segment-option[data-seg="specific"]');

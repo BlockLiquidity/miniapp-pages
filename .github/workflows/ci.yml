@@ -1,0 +1,44 @@
+name: CI
+
+# Headless page tests. Runs on the self-hosted `full-auto` runner (label set:
+# self-hosted, linux, full-auto). Until that runner is registered the job stays
+# queued rather than failing — see DEPLOYMENT.md.
+#
+# `static.yml` is a different job (GitHub Pages publish on push to main) and
+# stays as it is.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One runner means one concurrent job, so a burst of pushes must not build a
+# queue: supersede the previous run for the same ref.
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: [self-hosted, linux, full-auto]
+    # The official Playwright image ships the matching browser binaries, so the
+    # runner host needs no `npx playwright install` and no `sudo apt`.
+    #
+    # ⚠️ This tag MUST match the exact `playwright` version in package.json.
+    # That is why the dependency is pinned exactly rather than with `^`: a
+    # caret would drift away from whatever tag is written here, and the browser
+    # in the image would stop matching the client driving it.
+    container: mcr.microsoft.com/playwright:v1.62.1-noble
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The runner shares a box with infra docs; do not leave a usable
+          # credential in the work tree after checkout.
+          persist-credentials: false
+
+      # `npm ci` (not `npm install`) so the committed package-lock.json is the
+      # thing that decides what gets installed.
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test

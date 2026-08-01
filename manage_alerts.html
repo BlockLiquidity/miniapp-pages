@@ -561,6 +561,10 @@
         // server-side and hands it over in `t` as base64 JSON — the same way
         // the alerts themselves arrive in `d`.
         let evmTokens = [];
+        // `null` ⇒ the lists above are complete. A number ⇒ how many there really
+        // are, i.e. the bot had to truncate to fit the WebApp URL budget.
+        let evmTokenTotal = null;
+        let alertTotal = null;
 
         function getEvmTokens() {
             try {
@@ -572,6 +576,17 @@
                 console.error('Failed to parse the collected-token list:', e);
                 return [];
             }
+        }
+
+        // `tn` / `dn` — the real totals, sent by bl-telegram-bot ONLY when it had
+        // to cut a list down to keep the WebApp URL under its 3900-character
+        // budget. Absent means "this is the complete list", which is why an older
+        // published page can ignore them entirely.
+        function getTruncatedTotal(key) {
+            const raw = new URLSearchParams(window.location.search).get(key);
+            if (raw === null) return null;
+            const total = parseInt(raw, 10);
+            return Number.isFinite(total) && total >= 0 ? total : null;
         }
 
         /// `formatAlert` returns plain text — never markup — but some of that text is
@@ -706,7 +721,13 @@
                 : allAlerts.filter(a => a.kind === currentKind);
 
             const kindLabel = ALERT_TYPES.find(t => t.id === currentKind)?.label || 'All';
-            summary.innerHTML = `<div class="summary-text">${filtered.length} alert${filtered.length !== 1 ? 's' : ''}${currentKind !== -1 ? ' in ' + kindLabel : ''}</div>`;
+            // `dn` is present only when bl-telegram-bot had to drop alerts to keep
+            // the WebApp URL under budget (it keeps the newest). The website has
+            // no URL limit, so that is where the rest are.
+            const truncated = alertTotal === null ? '' :
+                `<div class="summary-text" id="alertsTruncated">Showing ${esc(allAlerts.length)} of ${esc(alertTotal)} alerts.
+                 Open the website to see them all.</div>`;
+            summary.innerHTML = `<div class="summary-text">${filtered.length} alert${filtered.length !== 1 ? 's' : ''}${currentKind !== -1 ? ' in ' + kindLabel : ''}</div>${truncated}`;
 
             if (!filtered.length) {
                 content.innerHTML = `
@@ -933,20 +954,62 @@
                                 <div class="segment-option" data-seg="specific">Specific</div>
                             </div>
                             <div id="evmTokens" style="display:none">${tokenPickerHtml()}</div>
-                            <div class="hint-text">Only tokens we collect can be subscribed to (max ${EVM_MAX_TOKENS}).</div></div>
+                            <div class="hint-text">Only tokens we collect can be subscribed to (max ${EVM_MAX_TOKENS}).</div>
+                            ${evmTruncationHint()}</div>
                         <div class="form-group"><label>Minimum Size</label>
                             <div class="segmented-control" data-group="evmunit">
                                 <div class="segment-option active" data-seg="usd">USD value</div>
                                 <div class="segment-option" data-seg="amount">Token amount</div>
                             </div>
                             <input type="text" inputmode="decimal" id="fThreshold" placeholder="1000" value="1000">
-                            <div class="hint-text">Native HYPE transfers are not covered — only ERC-20 token transfers.</div></div>`;
+                            <div class="hint-text">Native HYPE transfers are not covered — only ERC-20 token transfers.</div>
+                            <div class="hint-text" id="evmUnpricedHint"></div></div>`;
                 case 0:
                 case 15:
                     return toggleFormHtml(kind);
                 default:
                     return `<div class="hint-text">Unsupported alert type.</div>`;
             }
+        }
+
+        // Shown only when the bot said the token list was cut down. The second
+        // sentence is the point: without it a truncated picker is a dead end.
+        function evmTruncationHint() {
+            if (evmTokenTotal === null) return '';
+            return `<div class="hint-text" id="evmTruncated">Showing ${esc(evmTokens.length)} of ${esc(evmTokenTotal)} collected tokens.
+                Paste a contract address to pick one that isn't listed.</div>`;
+        }
+
+        // The tokens a USD threshold would actually cover, given the current scope.
+        function evmCoveredTokens() {
+            if ((createState.seg.evmtokens || 'all') === 'all') return evmTokens;
+            return [...createState.tokens]
+                .map(a => evmTokens.find(t => t.token_address === a))
+                .filter(Boolean);
+        }
+
+        const isUnpriced = (token) => token.price_usd === null || token.price_usd === undefined;
+
+        // A USD threshold cannot be evaluated for a token with no price.
+        //
+        // For ALL_TOKEN the API now accepts it anyway and evaluates against the
+        // priced subset, so blocking here would refuse what the server allows —
+        // and would make the DEFAULT form fail for every user because of a token
+        // they never chose. Naming the gap is the honest middle ground. Selecting
+        // an unpriced token explicitly is still a hard error, mirroring the API.
+        function updateEvmUnpricedHint() {
+            const el = document.getElementById('evmUnpricedHint');
+            if (!el) return;
+            const usd = (createState.seg.evmunit || 'usd') === 'usd';
+            const unpriced = usd ? evmCoveredTokens().filter(isUnpriced) : [];
+            if (!usd || !unpriced.length || (createState.seg.evmtokens || 'all') !== 'all') {
+                el.textContent = '';
+                return;
+            }
+            const names = unpriced.map(t => t.symbol).join(', ');
+            el.textContent = `${unpriced.length} token${unpriced.length === 1 ? '' : 's'} `
+                + `${unpriced.length === 1 ? 'has' : 'have'} no USD price and won't be covered `
+                + `by a USD threshold: ${names}.`;
         }
 
         function toggleFormHtml(kind) {
@@ -994,6 +1057,7 @@
             // picker off the collected-token list rather than the HL universe.
             if (kind === 11) {
                 setupTokenPicker(true, evmTokens.map(t => ({ value: t.token_address, label: t.symbol })));
+                updateEvmUnpricedHint();
             }
             modalBody.scrollTop = 0;
 
@@ -1035,8 +1099,10 @@
                 document.getElementById('fSize').style.display = (val === 'custom') ? 'block' : 'none';
             } else if (group === 'evmtokens') {
                 document.getElementById('evmTokens').style.display = (val === 'specific') ? 'block' : 'none';
+                updateEvmUnpricedHint();
             } else if (group === 'evmunit') {
                 document.getElementById('fThreshold').placeholder = (val === 'usd') ? '1000' : '250';
+                updateEvmUnpricedHint();
             }
         }
 
@@ -1050,19 +1116,29 @@
             const chips = document.getElementById('tpChips');
             if (!search || !dropdown || !chips) return;
 
+            // Falls back to the value itself when there is no label for it — which
+            // is the case for an address the user pasted (see `renderDropdown`).
+            // `shortAddress` is a no-op on anything 10 characters or shorter, so
+            // symbols are unaffected.
             const labelOf = (value) =>
-                options ? ((options.find(o => o.value === value) || {}).label || value) : value;
+                options
+                    ? ((options.find(o => o.value === value) || {}).label || shortAddress(String(value)))
+                    : value;
 
+            // Every interpolation below goes through `esc()`. A kind-11 option
+            // label is a token `symbol`, which is chosen by whoever deployed the
+            // ERC-20 — the same untrusted-text problem `renderAlerts` already
+            // solves for an alert's custom name.
             function renderChips() {
                 if (multi) {
                     chips.innerHTML = [...createState.tokens].map(t =>
-                        `<span class="tp-chip">${labelOf(t)}<span class="tp-x" data-t="${t}">&times;</span></span>`).join('');
+                        `<span class="tp-chip">${esc(labelOf(t))}<span class="tp-x" data-t="${esc(t)}">&times;</span></span>`).join('');
                     chips.querySelectorAll('.tp-x').forEach(x =>
                         x.addEventListener('click', () => { createState.tokens.delete(x.dataset.t); renderChips(); }));
                     search.style.display = 'block';
                 } else {
                     if (createState.singleToken) {
-                        chips.innerHTML = `<span class="tp-chip">${labelOf(createState.singleToken)}<span class="tp-x">&times;</span></span>`;
+                        chips.innerHTML = `<span class="tp-chip">${esc(labelOf(createState.singleToken))}<span class="tp-x">&times;</span></span>`;
                         chips.querySelector('.tp-x').addEventListener('click', () => { createState.singleToken = null; renderChips(); });
                         search.style.display = 'none';
                     } else {
@@ -1071,19 +1147,36 @@
                         search.value = '';
                     }
                 }
+                // Changing the token set changes which tokens a USD threshold
+                // would cover, so the hint has to follow it.
+                if (createState.kind === 11) updateEvmUnpricedHint();
             }
 
             function renderDropdown(q) {
-                const query = (q || '').toLowerCase();
+                const raw = (q || '').trim();
+                const query = raw.toLowerCase();
                 const source = options || (tokenList || []).map(t => ({ value: t, label: t }));
-                const matches = source.filter(o => o.label.toLowerCase().includes(query)).slice(0, 50);
+                const matches = source
+                    .filter(o => o.label.toLowerCase().includes(query) || o.value.toLowerCase() === query)
+                    .slice(0, 50);
+
+                // Contract-address free entry (HyperEVM only). The `t` list can be
+                // truncated to fit the WebApp URL budget, so a token that IS
+                // collected may simply not be in it. The API validates the address
+                // regardless, and queues an uncollected one in
+                // `hl_evm_token_requests`, so offering it is a working path rather
+                // than a dead end — this is what keeps the picker usable past the cap.
+                if (options && isAddress(raw) && !source.some(o => o.value.toLowerCase() === query)) {
+                    matches.unshift({ value: query, label: `${query} (not listed)` });
+                }
+
                 if (!matches.length) {
                     const empty = options
                         ? (options.length ? 'No tokens found' : 'No tokens are collected yet')
                         : (tokenList ? 'No tokens found' : 'Loading tokens…');
-                    dropdown.innerHTML = `<div class="tp-item tp-empty">${empty}</div>`;
+                    dropdown.innerHTML = `<div class="tp-item tp-empty">${esc(empty)}</div>`;
                 } else {
-                    dropdown.innerHTML = matches.map(o => `<div class="tp-item" data-t="${o.value}">${o.label}</div>`).join('');
+                    dropdown.innerHTML = matches.map(o => `<div class="tp-item" data-t="${esc(o.value)}">${esc(o.label)}</div>`).join('');
                     dropdown.querySelectorAll('.tp-item[data-t]').forEach(it =>
                         it.addEventListener('mousedown', (e) => { e.preventDefault(); pick(it.dataset.t); }));
                 }
@@ -1242,14 +1335,25 @@
 
                     const unit = createState.seg.evmunit || 'usd';
                     if (unit === 'usd' && threshold > 0) {
-                        // A USD threshold cannot be evaluated for an unpriced token,
-                        // so the API refuses it — say which token, here.
-                        const covered = tokens === 'ALL_TOKEN'
-                            ? evmTokens
-                            : tokens.map(a => evmTokens.find(t => t.token_address === a)).filter(Boolean);
-                        const unpriced = covered.find(t => t.price_usd === null || t.price_usd === undefined);
-                        if (unpriced) {
-                            return { error: `No USD price is available for ${unpriced.symbol}; use a token-amount threshold instead` };
+                        // Mirrors the API exactly (rule V6):
+                        //  * a NAMED unpriced token is refused — the user asked
+                        //    for something we cannot evaluate;
+                        //  * ALL_TOKEN is accepted against the priced subset, so
+                        //    it is only a hint here (`updateEvmUnpricedHint`);
+                        //  * ALL_TOKEN with NOTHING priced is refused, because
+                        //    there is no subset to evaluate against.
+                        if (tokens === 'ALL_TOKEN') {
+                            if (evmTokens.length && !evmTokens.some(t => !isUnpriced(t))) {
+                                return { error: 'No collected token has a USD price right now; use a token-amount threshold instead' };
+                            }
+                        } else {
+                            const named = tokens
+                                .map(a => evmTokens.find(t => t.token_address === a))
+                                .filter(Boolean);
+                            const unpriced = named.find(isUnpriced);
+                            if (unpriced) {
+                                return { error: `No USD price is available for ${unpriced.symbol}; use a token-amount threshold instead` };
+                            }
                         }
                     }
 
@@ -1302,6 +1406,8 @@
         // Init
         allAlerts = getAlerts();
         evmTokens = getEvmTokens();
+        evmTokenTotal = getTruncatedTotal('tn');
+        alertTotal = getTruncatedTotal('dn');
         renderTabs();
         renderAlerts();
     </script>
