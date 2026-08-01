@@ -805,6 +805,9 @@
         function syncPickerVisibility() {
             tokenPickerGroup.classList.toggle('hidden', allTokensToggle.checked);
             scopeError.classList.remove('show');
+            // The hint only applies to the "all collected tokens" scope, so it
+            // has to follow this toggle.
+            updateUnpricedHint();
             if (allTokensToggle.checked) {
                 tokensError.classList.remove('show');
             } else {

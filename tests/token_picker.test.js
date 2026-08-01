@@ -229,6 +229,13 @@ async function openEvmCreateForm(page, query) {
     await page.fill('#address', WALLET);
     const hint = await page.locator('#unpricedHint').textContent();
     assert(hint.includes('NOPRICE'), 'standalone page hint names the unpriced token: ' + hint);
+    // The hint is ALL_TOKEN-only, so it has to follow the scope toggle.
+    await page.click('#allTokensToggle');
+    assert(!(await page.locator('#unpricedHint').isVisible()),
+      'standalone page: the hint clears when the scope stops being all-collected');
+    await page.click('#allTokensToggle');
+    assert(await page.locator('#unpricedHint').isVisible(),
+      'standalone page: and returns when it goes back');
     await page.click('#submitBtn');
     payload = JSON.parse((await page.evaluate(() => window.__sent)).pop());
     assert(payload.data.tokens === 'ALL_TOKEN' && payload.data.min_usd === 1000,

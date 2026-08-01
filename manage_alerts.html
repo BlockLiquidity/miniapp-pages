@@ -980,14 +980,6 @@
                 Paste a contract address to pick one that isn't listed.</div>`;
         }
 
-        // The tokens a USD threshold would actually cover, given the current scope.
-        function evmCoveredTokens() {
-            if ((createState.seg.evmtokens || 'all') === 'all') return evmTokens;
-            return [...createState.tokens]
-                .map(a => evmTokens.find(t => t.token_address === a))
-                .filter(Boolean);
-        }
-
         const isUnpriced = (token) => token.price_usd === null || token.price_usd === undefined;
 
         // A USD threshold cannot be evaluated for a token with no price.
@@ -1000,9 +992,12 @@
         function updateEvmUnpricedHint() {
             const el = document.getElementById('evmUnpricedHint');
             if (!el) return;
-            const usd = (createState.seg.evmunit || 'usd') === 'usd';
-            const unpriced = usd ? evmCoveredTokens().filter(isUnpriced) : [];
-            if (!usd || !unpriced.length || (createState.seg.evmtokens || 'all') !== 'all') {
+            // ALL_TOKEN only: a specific unpriced token is a hard error, so a
+            // "not covered" hint there would be a lie.
+            const applies = (createState.seg.evmunit || 'usd') === 'usd'
+                && (createState.seg.evmtokens || 'all') === 'all';
+            const unpriced = applies ? evmTokens.filter(isUnpriced) : [];
+            if (!unpriced.length) {
                 el.textContent = '';
                 return;
             }
