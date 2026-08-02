@@ -634,6 +634,10 @@
                     </div>
 
                     <div class="error-message" id="tokensError"></div>
+                    <!-- Filled in only when the bot had to truncate `t` (see `tn`).
+                         The second sentence is the point: a short picker without
+                         it is a dead end. -->
+                    <p class="field-hint hidden" id="tokensTruncated"></p>
                 </div>
 
                 <div class="divider"></div>
@@ -657,6 +661,10 @@
                         autocomplete="off"
                     >
                     <div class="error-message" id="thresholdError"></div>
+                    <!-- Non-blocking: the API evaluates an ALL_TOKEN USD
+                         threshold against the priced subset, so this states the
+                         gap rather than refusing the form. -->
+                    <p class="field-hint hidden" id="unpricedHint"></p>
                 </div>
 
                 <div class="coverage-notice">
@@ -711,8 +719,21 @@
             }
         }
 
+        // `tn` — the real number of collected tokens, sent by bl-telegram-bot ONLY
+        // when it had to cut `t` down to keep the WebApp URL under its
+        // 3900-character budget. Absent means "this is the complete list", which
+        // is why an older published page could ignore it entirely.
+        function loadCollectedTotal() {
+            const raw = new URLSearchParams(window.location.search).get('tn');
+            if (raw === null) return null;
+            const total = parseInt(raw, 10);
+            return Number.isFinite(total) && total >= 0 ? total : null;
+        }
+
         const state = {
             allTokens: loadCollectedTokens(),
+            // `null` ⇒ `allTokens` is the complete watchlist.
+            collectedTotal: loadCollectedTotal(),
             // Token CONTRACT ADDRESSES, not symbols: symbols are not unique on an
             // EVM chain, and the transfer rows carry only the address.
             selectedTokens: new Set(),
@@ -738,6 +759,8 @@
         const clearAllBtn       = document.getElementById('clearAllBtn');
         const tokensError       = document.getElementById('tokensError');
         const scopeError        = document.getElementById('scopeError');
+        const unpricedHint      = document.getElementById('unpricedHint');
+        const tokensTruncated   = document.getElementById('tokensTruncated');
 
         function tokenByAddress(address) {
             return state.allTokens.find(t => t.token_address === address);
@@ -765,6 +788,9 @@
             state.unit = value;
             thresholdInput.placeholder = value === 'usd' ? '1000' : '250';
             thresholdError.classList.remove('show');
+            // Switching to a token amount covers every token, so the gap the
+            // hint describes disappears.
+            updateUnpricedHint();
         });
 
         // Direction is meaningless without a wallet — the API ignores it, so the
@@ -779,6 +805,9 @@
         function syncPickerVisibility() {
             tokenPickerGroup.classList.toggle('hidden', allTokensToggle.checked);
             scopeError.classList.remove('show');
+            // The hint only applies to the "all collected tokens" scope, so it
+            // has to follow this toggle.
+            updateUnpricedHint();
             if (allTokensToggle.checked) {
                 tokensError.classList.remove('show');
             } else {
@@ -790,12 +819,33 @@
         function renderDropdown(filterText = '') {
             dropdownList.innerHTML = '';
 
-            const query = filterText.toLowerCase();
+            const raw = filterText.trim();
+            const query = raw.toLowerCase();
             const filtered = state.allTokens.filter(token =>
                 !state.selectedTokens.has(token.token_address) &&
                 (token.symbol.toLowerCase().includes(query) ||
                  token.token_address.toLowerCase().includes(query))
             );
+
+            // Contract-address free entry. `t` can be truncated to fit the WebApp
+            // URL budget, so a token that IS collected may simply not be in this
+            // list. The API validates the address either way, and queues an
+            // uncollected one in `hl_evm_token_requests`, so offering it is a
+            // working path rather than a dead end — this is what keeps the picker
+            // usable once the watchlist outgrows the cap.
+            if (/^0x[0-9a-fA-F]{40}$/.test(raw)
+                && !state.selectedTokens.has(query)
+                && !state.allTokens.some(t => t.token_address.toLowerCase() === query)) {
+                const pasted = document.createElement('div');
+                pasted.className = 'dropdown-item';
+                pasted.textContent = `${query} (not listed)`;
+                pasted.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    addToken(query);
+                });
+                dropdownList.appendChild(pasted);
+                return;
+            }
 
             if (filtered.length === 0) {
                 const noResult = document.createElement('div');
@@ -894,6 +944,43 @@
                 : Array.from(state.selectedTokens).map(tokenByAddress).filter(Boolean);
         }
 
+        const isUnpriced = (token) => token.price_usd === null || token.price_usd === undefined;
+
+        /**
+         * Name the tokens an "all collected tokens" USD threshold will NOT cover.
+         *
+         * The API accepts that subscription and evaluates it against the priced
+         * subset, so this is a statement of fact rather than a refusal — but it
+         * has to be a statement, or the alert quietly means less than it looks.
+         */
+        function updateUnpricedHint() {
+            const usd = state.unit === 'usd';
+            const unpriced = (usd && allTokensToggle.checked)
+                ? state.allTokens.filter(isUnpriced)
+                : [];
+            if (!unpriced.length) {
+                unpricedHint.classList.add('hidden');
+                unpricedHint.textContent = '';
+                return;
+            }
+            unpricedHint.textContent = `${unpriced.length} token${unpriced.length === 1 ? '' : 's'} `
+                + `${unpriced.length === 1 ? 'has' : 'have'} no USD price and won't be covered `
+                + `by a USD threshold: ${unpriced.map(t => t.symbol).join(', ')}.`;
+            unpricedHint.classList.remove('hidden');
+        }
+
+        /** Say how much of the watchlist is missing, and what to do about it. */
+        function renderTruncationNotice() {
+            if (state.collectedTotal === null) {
+                tokensTruncated.classList.add('hidden');
+                return;
+            }
+            tokensTruncated.textContent =
+                `Showing ${state.allTokens.length} of ${state.collectedTotal} collected tokens. `
+                + `Paste a contract address to pick one that isn't listed.`;
+            tokensTruncated.classList.remove('hidden');
+        }
+
         function validateForm() {
             let isValid = true;
             [addressError, tokensError, scopeError, thresholdError].forEach(el => el.classList.remove('show'));
@@ -925,14 +1012,28 @@
                 thresholdError.classList.add('show');
                 isValid = false;
             } else if (state.unit === 'usd' && threshold > 0) {
-                // A USD threshold cannot be evaluated for a token we have no
-                // price for, so the API refuses it. Say which token, here, while
-                // the user can still act on it.
-                const unpriced = coveredTokens().find(t => t.price_usd === null || t.price_usd === undefined);
-                if (unpriced) {
-                    thresholdError.textContent = `No USD price is available for ${unpriced.symbol}; use a token-amount threshold instead.`;
-                    thresholdError.classList.add('show');
-                    isValid = false;
+                // Mirrors the API exactly (rule V6):
+                //  * a NAMED unpriced token is refused — the user asked for
+                //    something that cannot be evaluated;
+                //  * "all collected tokens" is accepted against the priced
+                //    subset, so it is only a hint (`updateUnpricedHint`).
+                //    Refusing it would make the DEFAULT form fail for every user
+                //    because of a token they never chose;
+                //  * "all collected tokens" with NOTHING priced is refused —
+                //    there is no subset to evaluate against.
+                if (allTokensToggle.checked) {
+                    if (state.allTokens.length && !state.allTokens.some(t => !isUnpriced(t))) {
+                        thresholdError.textContent = 'No collected token has a USD price right now; use a token-amount threshold instead.';
+                        thresholdError.classList.add('show');
+                        isValid = false;
+                    }
+                } else {
+                    const unpriced = coveredTokens().find(isUnpriced);
+                    if (unpriced) {
+                        thresholdError.textContent = `No USD price is available for ${unpriced.symbol}; use a token-amount threshold instead.`;
+                        thresholdError.classList.add('show');
+                        isValid = false;
+                    }
                 }
             }
 
@@ -996,6 +1097,8 @@
         syncDirectionVisibility();
         syncPickerVisibility();
         renderSelectedChips();
+        renderTruncationNotice();
+        updateUnpricedHint();
     </script>
 </body>
 </html>

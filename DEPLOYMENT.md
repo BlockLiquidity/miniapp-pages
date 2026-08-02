@@ -27,11 +27,35 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
   (`tg.initDataUnsafe.user` is absent).
 - **Logs:** none server-side; use the browser console. Deploy logs are in the repo's
   GitHub **Actions** tab.
-- **Tests:** `npm install && npm test` — headless Playwright smoke tests
+- **Tests:** `npm ci && npm test` — headless Playwright smoke tests
   (`tests/*.test.js`) that drive the real pages in Chromium and assert the exact
-  `sendData` payload. They are a developer tool only; nothing in the deploy
-  pipeline runs them, and `package.json` / `node_modules` are not part of the
-  published site (`node_modules` is gitignored).
+  `sendData` payload. **They gate pull requests** as of 2026-08-02 (see CI
+  below); they used to be a developer tool nothing ran. Needs Node ≥ 20 (what the
+  pinned Playwright requires) — the Playwright container used in CI already has
+  it. `package.json` / `node_modules` are not part of the published site
+  (`node_modules` is gitignored; `package-lock.json` is committed, and both are
+  harmless in the Pages artefact, which uploads the whole repo).
+
+## CI (tests) — added 2026-08-02
+
+`.github/workflows/ci.yml` runs `npm ci && npm test` on pull requests and pushes
+to `main`. It is a **different job** from `static.yml` (which publishes) — keep
+both.
+
+- **Runner:** the self-hosted GitHub Actions runner on the full-auto server,
+  label set `[self-hosted, linux, full-auto]`. Until SI registers it, jobs queue
+  rather than fail.
+- **Container:** `mcr.microsoft.com/playwright:v1.62.1-noble`, so the browser
+  binaries come with the image and the runner host needs no
+  `npx playwright install` and no `sudo apt`.
+- ⚠️ **The container tag and the `playwright` version in `package.json` must
+  match exactly.** That is why the dependency is pinned to `1.62.1` rather than
+  `^1.49.0`: a caret drifts away from whatever tag the workflow names, and the
+  browser in the image stops matching the client driving it. Bump both in the
+  same commit, and check the tag exists
+  (`curl -s https://mcr.microsoft.com/v2/playwright/tags/list`).
+- **`package-lock.json` is committed** so `npm ci` has something to install
+  from. `npm ci` fails without it.
 
 ## How to deploy
 - **CI:** `.github/workflows/static.yml` — on every push to `main` (or manual
@@ -71,6 +95,26 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
   EVM chain and the transfer rows carry only `token_address`, so the picker shows
   `WHYPE` but submits `0x5555…5555`. `min_usd` **replaces** `min_amount` — never
   send both.
+- **A token `symbol` is untrusted.** Anyone can deploy an ERC-20 and get it past
+  `hl-evm-watchlist-populator`'s volume/liquidity floors, so a symbol is
+  attacker-chosen text that lands in `innerHTML`. Every interpolation in
+  `manage_alerts.html`'s `setupTokenPicker` goes through `esc()`;
+  `evm_transfer_alert.html` builds its rows with `textContent` and must keep
+  doing so. `tests/token_picker.test.js` fails if either regresses.
+- **`t` may be incomplete — check `tn`/`dn`.** bl-telegram-bot caps the WebApp
+  URL at 3900 characters and sends `tn` (real token count) / `dn` (real alert
+  count) **only when it had to truncate**. Absent means "complete list", which is
+  why these pages could be updated after the bot shipped. When `tn` is present
+  the picker shows "Showing N of TN…" and the user can **paste a contract
+  address** to select a token that is not in the list — the API validates it
+  regardless and queues an uncollected one, so it is a working path.
+- **An unpriced token is a hint, not an error, for "all collected tokens".**
+  `bl-alert-manager` evaluates an ALL_TOKEN USD threshold against the priced
+  subset, so blocking the form would refuse what the server accepts — and would
+  break the DEFAULT form for everyone over a token the user never chose. Naming
+  a specific unpriced token is still a hard error, and "all collected tokens"
+  with nothing priced at all is still refused. Both pages mirror the API here; if
+  the API's rule V6 changes, these two checks change with it.
 - **`tokens` wire format is per-alert-kind.** The New Trade page (`new_trade_alert.html`)
   sends `tokens: "ALL_TOKEN"` (string) for all tokens or an array of exact symbols —
   matching bl-telegram-bot's `NewTradeParams`/`TokenFilter`. This is the **singular**
