@@ -850,8 +850,14 @@
             if (filtered.length === 0) {
                 const noResult = document.createElement('div');
                 noResult.className = 'dropdown-item no-results';
+                // An empty list means one of two different things, and telling
+                // them apart matters: `tn` says the watchlist is NOT empty, the
+                // URL budget just left no room for it, so "none are collected"
+                // would contradict the "Showing 0 of N" hint right below.
                 noResult.textContent = state.allTokens.length === 0
-                    ? 'No tokens are collected yet — open this page from the bot menu.'
+                    ? (state.collectedTotal
+                        ? 'The token list was too long for this link — paste a contract address instead.'
+                        : 'No tokens are collected yet — open this page from the bot menu.')
                     : (query ? 'No tokens found' : 'All collected tokens selected');
                 dropdownList.appendChild(noResult);
                 return;

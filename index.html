@@ -388,11 +388,22 @@
         // That list is not public (it is the hl_evm_watched_tokens watchlist behind
         // bl-alert-manager's bearer auth), so bl-telegram-bot fetches it server-side
         // and puts it on this URL as base64 JSON — the page has no other source.
+        //
+        // `tn` rides along and must be forwarded too: the bot sends it only when it
+        // had to cut `t` down to keep the WebApp URL under its length budget, and it
+        // is what makes the page say "showing N of M" and offer contract-address
+        // entry for the tokens that were dropped. Dropping it here would leave a
+        // truncated list looking complete. It is forwarded independently of `t`
+        // because the bot sends `tn` alone when not even one token fit.
         const evmTokens = params.get('t');
-        if (evmTokens !== null) {
+        const evmTokenTotal = params.get('tn');
+        if (evmTokens !== null || evmTokenTotal !== null) {
             const evmLink = document.getElementById('evm-transfer-alert-link');
             if (evmLink) {
-                evmLink.href = `evm_transfer_alert.html?t=${encodeURIComponent(evmTokens)}`;
+                const evmParams = new URLSearchParams();
+                if (evmTokens !== null) evmParams.set('t', evmTokens);
+                if (evmTokenTotal !== null) evmParams.set('tn', evmTokenTotal);
+                evmLink.href = `evm_transfer_alert.html?${evmParams}`;
             }
         }
     </script>
