@@ -527,6 +527,7 @@
             { id: 8,  label: "Direction",       icon: "🎯" },
             { id: 11, label: "HyperEVM Transfer", icon: "🔗" },
             { id: 15, label: "Hedge Fund Verified Signal", icon: "✅" },
+            { id: 16, label: "Hedge Fund Signal", icon: "🔔" },
             { id: 0,  label: "New Token",      icon: "✨" },
         ];
 
@@ -708,6 +709,12 @@
                 }
                 case 15:
                     return { title: "Hedge Fund Verified Signal", detail: "Notify on verified hedge-fund signals" };
+                case 16: {
+                    // Per-signal hedge-fund subscription: created from the signal's
+                    // own page on the website, so the mini app only lists/deletes it.
+                    const sid = typeof ex.signal_id === 'string' && ex.signal_id ? ex.signal_id : 'signal';
+                    return { title: ex.name || `Hedge Fund Signal: ${sid}`, detail: `Notify when ${sid} newly triggers` };
+                }
                 default:
                     return { title: `Alert`, detail: `kind ${k}` };
             }

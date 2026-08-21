@@ -188,6 +188,7 @@
             { id: 8, label: "Direction" },
             { id: 4, label: "Funding" },
             { id: 15, label: "Hedge Fund Verified Signal" },
+            { id: 16, label: "Hedge Fund Signal" },
             { id: 0, label: "New Token" },
         ];
 
@@ -381,6 +382,9 @@
             }
             if (k === 0) return `Notify for new tokens`;
             if (k === 15) return `Notify on verified hedge-fund signals`;
+            // Kind 16 (per-signal): deliberately not interpolating extra.signal_id
+            // here — this page renders raw HTML without escaping.
+            if (k === 16) return `Notify when a subscribed hedge-fund signal triggers`;
             return "Custom Alert Notification";
         }
 
