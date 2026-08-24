@@ -7,13 +7,22 @@ page collects input and returns it to the bot via `Telegram.WebApp.sendData(...)
 the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
 `telegram-miniapp` repo.
 
-## Where it runs
-- **Host / platform:** GitHub Pages (static hosting). No server, no datastore, no
-  backend of its own.
-- **Public URL:** `https://blockliquidity.github.io/miniapp-pages/` (per-page, e.g.
-  `.../new_trade_alert.html`). These URLs are configured as the WebApp URLs in
-  bl-telegram-bot.
-- **Run-as / ports:** none (static assets served by the GitHub Pages CDN).
+## Where it runs (since 2026-08-24)
+- **Host / platform:** nginx on the **frontend-dev EC2** (`i-09cff225544276b46`, 13.196.43.235),
+  vhost `/etc/nginx/sites-available/miniapp-pages`, docroot `/opt/miniapp-pages/current`
+  (an rsync target, not a git checkout), behind **CloudFront** distribution `E44UYC083ZCGI`.
+- **Public URL:** `https://dsxx57hefy9jg.cloudfront.net/` (per-page, e.g.
+  `.../new_trade_alert.html`; extensionless paths like `/new_trade_alert` also work via
+  nginx `try_files $uri $uri.html` — the bot links some pages without the suffix).
+  These URLs are configured as the WebApp URLs in bl-telegram-bot (`MINIAPP_BASE_URL`).
+- **Public access / DDoS:** the instance SG admits :80 only from CloudFront's origin-facing
+  prefix list (`pl-58a04531`) — the origin is not directly reachable. AWS Shield Standard and
+  CloudFront edge caching absorb floods; nginx adds a 10 r/s per-viewer `limit_req`
+  (keyed on `CloudFront-Viewer-Address`) and only GET/HEAD are allowed. Origin sends
+  `Cache-Control: max-age=300`; deploys invalidate the edge cache anyway.
+- Replaces GitHub Pages (`static.yml`), which stopped publishing when org GitHub Actions
+  were billing-blocked on 2026-08-21. The old `blockliquidity.github.io/miniapp-pages`
+  site may still serve a stale copy until Pages is disabled by a repo admin.
 - **External services called from the browser:**
   - the Hyperliquid public info API (`https://api.hyperliquid.xyz/info`) via
     `token-fetcher.js` to populate token pickers;
@@ -25,8 +34,8 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
   then open `http://localhost:8000/new_trade_alert.html`. Pages fall back to a
   console/`alert()` "simulated send" when opened outside Telegram
   (`tg.initDataUnsafe.user` is absent).
-- **Logs:** none server-side; use the browser console. Deploy logs are in the repo's
-  GitHub **Actions** tab.
+- **Logs:** nginx access/error logs on the frontend-dev EC2; deploy logs in the Jenkins job
+  (below).
 - **Tests:** `npm ci && npm test` — headless Playwright smoke tests
   (`tests/*.test.js`) that drive the real pages in Chromium and assert the exact
   `sendData` payload. **They gate pull requests** as of 2026-08-02 (see CI
@@ -35,6 +44,15 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
   it. `package.json` / `node_modules` are not part of the published site
   (`node_modules` is gitignored; `package-lock.json` is committed, and both are
   harmless in the Pages artefact, which uploads the whole repo).
+
+## How to deploy — Jenkins (automatic on push to `main`)
+
+Jenkins job **`miniapp-pages-deploy`** on the full-auto Jenkins
+(https://full-auto.ddns.net:9999/job/miniapp-pages-deploy/), webhook-triggered with a 10-min
+poll fallback: `git archive` of `main` → SSH to the EC2 (deploy key
+`/opt/deploy-keys/frontend-dev-ec2.pem`) → rsync into `/opt/miniapp-pages/current`
+(stamps `.deployed-commit`) → verify the vhost serves 200 → CloudFront invalidation
+(`aws-deploy` credential) → verify the edge serves 200.
 
 ## CI (tests) — added 2026-08-02
 
