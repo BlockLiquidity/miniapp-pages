@@ -61,8 +61,20 @@ to `main`. It is a **different job** from `static.yml` (which publishes) — kee
 both.
 
 - **Runner:** the self-hosted GitHub Actions runner on the full-auto server,
-  label set `[self-hosted, linux, full-auto]`. Until SI registers it, jobs queue
+  label set `[self-hosted, linux, full-auto]`. Until it is registered, jobs queue
   rather than fail.
+- ⚠️ **Status 2026-08-02: the runner is INSTALLED but NOT REGISTERED, so this
+  workflow does not run yet, and there is a second blocker specific to this
+  repo.** `/opt/actions-runner` on the full-auto server has the runner software
+  and a dedicated non-root `ghrunner` user, but `config.sh` needs an **org-level
+  registration token** that only a **GitHub org owner** can mint. On top of that,
+  `ghrunner` is deliberately **not** in the `docker` group — membership is
+  root-equivalent on that box, and the box holds the infra docs and secrets — so
+  even once the runner is registered, this workflow's `container:` step cannot
+  start until someone decides between: (a) adding `ghrunner` to `docker`
+  (accepting the escalation), (b) rootless Docker for that user, or (c) running
+  just this job on a GitHub-hosted runner. The three Rust repos' workflows do not
+  need Docker and will work as soon as the runner is registered.
 - **Container:** `mcr.microsoft.com/playwright:v1.62.1-noble`, so the browser
   binaries come with the image and the runner host needs no
   `npx playwright install` and no `sudo apt`.
@@ -85,6 +97,22 @@ both.
 - **Verify:** open the deployed page URL in a browser (hard-refresh to bypass CDN
   cache) and confirm the new UI/behaviour, or open it from the bot in Telegram and
   complete a submission end-to-end. Check the Actions tab for a green run.
+- **Verify without a browser** (what SI can actually run headlessly): fetch each
+  changed page over HTTPS and diff it against the merged tree. The Pages artefact
+  is the repo verbatim — no build step — so the served file must be **byte-identical**
+  to `main`, which is a far stronger check than "the page loads".
+
+  ```bash
+  curl -fsS https://blockliquidity.github.io/miniapp-pages/manage_alerts.html -o /tmp/live.html
+  diff <(sed 's/\r$//' manage_alerts.html) <(sed 's/\r$//' /tmp/live.html) && echo IDENTICAL
+  ```
+
+  Done for the 2026-08-02 release (`e749f37`, PR #6): `manage_alerts.html` and
+  `evm_transfer_alert.html` both returned 200 and hashed identical to `main`
+  (`sha256` `26afaefa…` and `f1a1d1bd…`), and the escaping (`esc(o.label)`,
+  `esc(o.value)`, `esc(labelOf(...))`) plus both truncation notices
+  ("Showing N of M collected tokens." / "… of M alerts.") are present in the
+  served bytes. The `static.yml` run for that merge was green in 21s.
 - **Rollback:** revert the offending commit on `main` (or re-run the workflow from a
   previous good commit) — Pages re-publishes the reverted content. There is no build
   artifact to manage.
