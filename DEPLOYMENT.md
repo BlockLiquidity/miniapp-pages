@@ -8,9 +8,8 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
 `telegram-miniapp` repo.
 
 ## Where it runs (since 2026-08-24)
-- **Host / platform:** nginx on the **frontend-dev EC2** (`i-09cff225544276b46`, 13.196.43.235),
-  vhost `/etc/nginx/sites-available/miniapp-pages`, docroot `/opt/miniapp-pages/current`
-  (an rsync target, not a git checkout), behind **CloudFront** distribution `E44UYC083ZCGI`.
+- **Host / platform:** nginx on the **frontend-dev EC2**, behind **CloudFront** (instance, IP, vhost,
+  docroot and distribution: see bl-database `apps/jenkins-controller/deploy-keys/README.md`).
 - **Public URL:** `https://dsxx57hefy9jg.cloudfront.net/` (per-page, e.g.
   `.../new_trade_alert.html`; extensionless paths like `/new_trade_alert` also work via
   nginx `try_files $uri $uri.html` — the bot links some pages without the suffix).
