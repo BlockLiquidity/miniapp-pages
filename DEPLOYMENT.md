@@ -38,7 +38,7 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
   (below).
 - **Tests:** `npm ci && npm test` — headless Playwright smoke tests
   (`tests/*.test.js`) that drive the real pages in Chromium and assert the exact
-  `sendData` payload. **They gate pull requests** as of 2026-08-02 (see CI
+  `sendData` payload. **They gate pull requests** (Jenkins PR check since 2026-10-28, see CI
   below); they used to be a developer tool nothing ran. Needs Node ≥ 20 (what the
   pinned Playwright requires) — the Playwright container used in CI already has
   it. `package.json` / `node_modules` are not part of the published site
@@ -54,26 +54,32 @@ poll fallback: `git archive` of `main` → SSH to the EC2 (deploy key
 (stamps `.deployed-commit`) → verify the vhost serves 200 → CloudFront invalidation
 (`aws-deploy` credential) → verify the edge serves 200.
 
-## CI (tests) — added 2026-08-02
+## CI — Jenkins PR check (since 2026-10-28)
 
-`.github/workflows/ci.yml` runs `npm ci && npm test` on pull requests and pushes
-to `main`. It is a **different job** from `static.yml` (which publishes) — keep
-both.
+Every pull request (built merged with its base) and every push to `main` runs `Jenkinsfile.ci` on the self-hosted
+Jenkins: multibranch job [`miniapp-pages-pr-check`](https://deploy.blockliquidity.xyz/job/miniapp-pages-pr-check/). The result is the
+GitHub commit status **`continuous-integration/jenkins/pr-merge`** on PRs (`.../branch` on trunk pushes).
+It replaced `.github/workflows/ci.yml` (ClickUp 1243juph7mm); org GitHub Actions had been unreliable/billing-blocked.
 
-- **Runner:** the self-hosted GitHub Actions runner on the full-auto server,
-  label set `[self-hosted, linux, full-auto]`. Until SI registers it, jobs queue
-  rather than fail.
-- **Container:** `mcr.microsoft.com/playwright:v1.62.1-noble`, so the browser
-  binaries come with the image and the runner host needs no
-  `npx playwright install` and no `sudo apt`.
-- ⚠️ **The container tag and the `playwright` version in `package.json` must
+- **Gates:** `npm ci` → `npm test` (headless Playwright page tests).
+- **Where:** the isolated `ci-untrusted` EC2 spot agent (single use, no deploy keys, no instance profile,
+  no Jenkins credentials), inside a digest-pinned `mcr.microsoft.com/playwright:v1.62.1-noble` container, as the Jenkins user
+  `pr-check-runner-miniapp-pages`. Checkout uses that user's read-only repo deploy key.
+- **`Jenkinsfile.ci` is not a deploy file** — keep deploy steps and credentials out of it. Only the Pipeline
+  steps on the bl-build-identity allowlist work in it.
+- **Re-run:** push to the PR, or Jenkins → `miniapp-pages-pr-check` → `PR-<n>` → *Build Now*. A PR opened before
+  `Jenkinsfile.ci` reached its base gets the check after a rebase / base merge.
+- Pattern, template and job config: bl-database `apps/jenkins-controller/pr-check/`.
+- ⚠️ **The CI image tag and the `playwright` version in `package.json` must
   match exactly.** That is why the dependency is pinned to `1.62.1` rather than
-  `^1.49.0`: a caret drifts away from whatever tag the workflow names, and the
+  `^1.49.0`: a caret drifts away from whatever tag `Jenkinsfile.ci` names, and the
   browser in the image stops matching the client driving it. Bump both in the
-  same commit, and check the tag exists
+  same commit (`CI_IMAGE` in `Jenkinsfile.ci`, with its new digest), and check the tag exists
   (`curl -s https://mcr.microsoft.com/v2/playwright/tags/list`).
 - **`package-lock.json` is committed** so `npm ci` has something to install
   from. `npm ci` fails without it.
+- Before 2026-10-28 the GitHub workflow targeted a self-hosted runner that was never
+  registered, so these tests never actually ran on CI.
 
 ## How to deploy
 - **CI:** `.github/workflows/static.yml` — on every push to `main` (or manual

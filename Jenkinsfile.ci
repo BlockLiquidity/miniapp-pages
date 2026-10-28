@@ -1,0 +1,90 @@
+// miniapp-pages — PR / branch CI (headless Playwright page tests). NO deploy.
+//
+// Run by the Jenkins multibranch job `miniapp-pages-pr-check`
+// (https://deploy.blockliquidity.xyz/job/miniapp-pages-pr-check/). Heads: main and every PR.
+// The result is the GitHub commit status `continuous-integration/jenkins/pr-merge` (PRs, built
+// merged with their base) or `continuous-integration/jenkins/branch` (trunk).
+// Replaces .github/workflows/ci.yml.
+//
+// This is NOT `Jenkinsfile` (in several repos that is the deploy pipeline). The PR-check job's
+// scriptPath is `Jenkinsfile.ci`, so a PR can never run a deploy file. Keep this file free of
+// deploy steps and credentials.
+//
+// Where: the EC2 spot `ci-untrusted` agent (16 GB, 4 vCPU, single use), inside a digest-pinned
+// toolchain container, as the low-privilege Jenkins user pr-check-runner-miniapp-pages. Only the
+// Pipeline steps on the bl-build-identity allowlist work here. Pattern + template:
+// bl-database apps/jenkins-controller/pr-check/.
+// The old workflow targeted the self-hosted `full-auto` runner, which was never registered,
+// so before this file the checks below had never run on CI.
+// The deploy pipeline is job miniapp-pages-deploy (separate, untouched).
+pipeline {
+  agent none
+
+  environment {
+    // THE agent label, and the only place it is set. ALWAYS `ci-untrusted`.
+    CI_AGENT_LABEL = 'ci-untrusted'
+    // MUST match the exact `playwright` version in package.json (1.62.1)
+    CI_IMAGE = 'mcr.microsoft.com/playwright:v1.62.1-noble@sha256:dcc5531e97840b9b5e794f2814476b21571c5124a3fca2267d73041f56e7580e'
+    CI_CTR   = "ci-${env.BUILD_TAG.replaceAll('[^A-Za-z0-9_.-]', '-')}"   // docker-name safe
+    // Names the cache dir. ci-untrusted hosts are single use, so it starts empty every build.
+    CI_CACHE_KEY = "${env.JOB_NAME.replaceAll('[^A-Za-z0-9_.-]', '-')}"
+  }
+
+  options {
+    // 2 attempts x 30 min (stage CI) + ~10 min for a spot reclaim (5 min grace) and
+    // re-provisioning. bl-build-identity caps any untrusted build at 110 min.
+    timeout(time: 70, unit: 'MINUTES')
+    // A new push aborts the running build of the same PR; trunk builds never abort each other.
+    disableConcurrentBuilds(abortPrevious: env.CHANGE_ID != null)
+    buildDiscarder(logRotator(numToKeepStr: '20', daysToKeepStr: '30'))
+    timestamps()
+  }
+
+  stages {
+    stage('CI') {
+      agent { label "${env.CI_AGENT_LABEL}" }
+      options {
+        // Spot reclaim / controller restart -> start over on a fresh agent; a failing step is
+        // never retried. retry is the outer wrapper, so the timeout is per attempt (incl. the
+        // wait for the agent).
+        retry(count: 2, conditions: [agent(), nonresumable()])
+        timeout(time: 30, unit: 'MINUTES')
+      }
+      stages {
+        stage('Container') {
+          steps {
+            // One container per build; every step below runs in it with `docker exec`. Same
+            // uid as the agent so the workspace stays deletable. --cpus 2 --memory 7g on a
+            // 4 vCPU / 16 GB single-use host.
+            sh '''
+              set -eu
+              docker rm -f "$CI_CTR" >/dev/null 2>&1 || true
+              cache="$HOME/.cache/ci-npm/$CI_CACHE_KEY"
+              mkdir -p "$cache"
+              docker run -d --init --name "$CI_CTR" \
+                --cpus 2 --memory 7g \
+                -u "$(id -u):$(id -g)" -e HOME=/tmp -e CI=true -e npm_config_cache=/tmp/.npm \
+                -v "$WORKSPACE:$WORKSPACE" -w "$WORKSPACE" \
+                -v "$cache:/tmp/.npm" \
+                "$CI_IMAGE" sleep infinity
+              docker exec "$CI_CTR" sh -c 'node -v && npm -v'
+              docker exec "$CI_CTR" npm ci
+              git rev-parse HEAD
+            '''
+          }
+        }
+
+        // `npm ci` above (the lock file decides), then the page tests; the browsers ship in the image.
+        stage('Test') {
+          steps { sh 'docker exec "$CI_CTR" npm test' }
+        }
+      }
+      post {
+        cleanup {
+          sh 'docker rm -f "$CI_CTR" >/dev/null 2>&1 || true'
+          cleanWs(deleteDirs: true, notFailBuild: true)
+        }
+      }
+    }
+  }
+}
