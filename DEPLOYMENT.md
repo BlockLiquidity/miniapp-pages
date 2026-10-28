@@ -8,9 +8,8 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
 `telegram-miniapp` repo.
 
 ## Where it runs (since 2026-08-24)
-- **Host / platform:** nginx on the **frontend-dev EC2** (`i-09cff225544276b46`, 13.196.43.235),
-  vhost `/etc/nginx/sites-available/miniapp-pages`, docroot `/opt/miniapp-pages/current`
-  (an rsync target, not a git checkout), behind **CloudFront** distribution `E44UYC083ZCGI`.
+- **Host / platform:** nginx on the **frontend-dev EC2**, behind **CloudFront** (instance, IP, vhost,
+  docroot and distribution: see bl-database `apps/jenkins-controller/deploy-keys/README.md`).
 - **Public URL:** `https://dsxx57hefy9jg.cloudfront.net/` (per-page, e.g.
   `.../new_trade_alert.html`; extensionless paths like `/new_trade_alert` also work via
   nginx `try_files $uri $uri.html` — the bot links some pages without the suffix).
@@ -47,12 +46,25 @@ the bot forwards it to **bl-alert-manager**. This repo replaces the deprecated
 
 ## How to deploy — Jenkins (automatic on push to `main`)
 
-Jenkins job **`miniapp-pages-deploy`** on the full-auto Jenkins
-(https://full-auto.ddns.net:9999/job/miniapp-pages-deploy/), webhook-triggered with a 10-min
-poll fallback: `git archive` of `main` → SSH to the EC2 (deploy key
-`/opt/deploy-keys/frontend-dev-ec2.pem`) → rsync into `/opt/miniapp-pages/current`
-(stamps `.deployed-commit`) → verify the vhost serves 200 → CloudFront invalidation
-(`aws-deploy` credential) → verify the edge serves 200.
+> ⚠️ This file is PUBLIC: the deploy ships the whole repo (minus `.github`, `tests`,
+> `package*.json`), so it is served by CloudFront. Keep IPs, security-group ids and key paths out
+> of it; the network details live in bl-database
+> `apps/jenkins-controller/deploy-keys/README.md` ("miniapp-pages-deploy network path").
+
+Jenkins job **`miniapp-pages-deploy`** on the AWS Jenkins controller
+(https://deploy.blockliquidity.xyz/job/miniapp-pages-deploy/; the old full-auto Jenkins is
+retired), webhook-triggered with a 10-min poll fallback. It runs on the trusted `deploy` agent:
+`git archive` of `main` → SSH to the frontend-dev EC2 (Jenkins deploy key, rotated 2026-10-28) →
+rsync into the vhost root (stamps `.deployed-commit`) → verify the vhost serves 200 → CloudFront
+invalidation → verify the edge serves 200.
+
+- **Network path:** frontend-dev's firewall has to admit SSH from the Jenkins controller. That
+  rule was missing from 2026-09-17 (controller move) until 2026-10-28, so every deploy would have
+  timed out at the first `ssh`.
+- **Verify a deploy:** `curl -s https://dsxx57hefy9jg.cloudfront.net/.deployed-commit` must print
+  the `main` SHA. Last proven by build #2 (2026-10-28, 16f431d).
+- **Rollback:** the job always ships `main` HEAD, so revert on `main` and push; the job deploys
+  the revert.
 
 ## CI — Jenkins PR check (since 2026-10-28)
 
