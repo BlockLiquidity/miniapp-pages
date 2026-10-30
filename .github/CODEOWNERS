@@ -1,0 +1,10 @@
+# The Jenkins PR check runs the PR's own Jenkinsfile(.ci), and .github/ workflows run with repo
+# secrets after merge, so these need the code owner's review (branch protection:
+# require_code_owner_reviews; ClickUp 1243juphgrf). See bl-database
+# apps/jenkins-controller/pr-check/README.md, "Gate files are code-owned".
+/Jenkinsfile.ci @asteriskrin
+/Jenkinsfile @asteriskrin
+/Jenkinsfile.sonar @asteriskrin
+/.gitleaks.toml @asteriskrin
+/.gitleaksignore @asteriskrin
+/.github/ @asteriskrin
