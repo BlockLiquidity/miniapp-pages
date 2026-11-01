@@ -31,9 +31,11 @@ pipeline {
   }
 
   options {
-    // 2 attempts x 30 min (stage CI) + ~10 min for a spot reclaim (5 min grace) and
-    // re-provisioning. bl-build-identity caps any untrusted build at 110 min.
-    timeout(time: 70, unit: 'MINUTES')
+    // Backstop only. Counted from the build start, so it includes every wait for a
+    // ci-untrusted agent (queue + ~1-2 min boot, both attempts), just like bl-build-identity's
+    // 110-min wall-clock cap; kept just under that cap so a stuck build ends here with a normal
+    // timeout. The real per-attempt budget is stage 'Checks' below. Keep at 105.
+    timeout(time: 105, unit: 'MINUTES')
     // A new push aborts the running build of the same PR; trunk builds never abort each other.
     disableConcurrentBuilds(abortPrevious: env.CHANGE_ID != null)
     buildDiscarder(logRotator(numToKeepStr: '20', daysToKeepStr: '30'))
@@ -44,39 +46,48 @@ pipeline {
     stage('CI') {
       agent { label "${env.CI_AGENT_LABEL}" }
       options {
-        // Spot reclaim / controller restart -> start over on a fresh agent; a failing step is
-        // never retried. retry is the outer wrapper, so the timeout is per attempt (incl. the
-        // wait for the agent).
+        // Spot reclaim / controller restart -> start over on a fresh agent. Test failures
+        // are never retried. No timeout here: stage options wrap the agent allocation, so a
+        // timeout here would also count the wait for a ci-untrusted agent, and a deep queue
+        // could abort the check before it ran (the per-attempt timeout is on stage 'Checks').
         retry(count: 2, conditions: [agent(), nonresumable()])
-        timeout(time: 30, unit: 'MINUTES')
       }
       stages {
-        stage('Container') {
-          steps {
-            // One container per build; every step below runs in it with `docker exec`. Same
-            // uid as the agent so the workspace stays deletable. --cpus 2 --memory 7g on a
-            // 4 vCPU / 16 GB single-use host.
-            sh '''
-              set -eu
-              docker rm -f "$CI_CTR" >/dev/null 2>&1 || true
-              cache="$HOME/.cache/ci-npm/$CI_CACHE_KEY"
-              mkdir -p "$cache"
-              docker run -d --init --name "$CI_CTR" \
-                --cpus 2 --memory 7g \
-                -u "$(id -u):$(id -g)" -e HOME=/tmp -e CI=true -e npm_config_cache=/tmp/.npm \
-                -v "$WORKSPACE:$WORKSPACE" -w "$WORKSPACE" \
-                -v "$cache:/tmp/.npm" \
-                "$CI_IMAGE" sleep infinity
-              docker exec "$CI_CTR" sh -c 'node -v && npm -v'
-              docker exec "$CI_CTR" npm ci
-              git rev-parse HEAD
-            '''
-          }
-        }
+        stage('Checks') {
+          // Per-attempt budget. This stage runs inside stage CI's agent, so the clock starts
+          // only once the ci-untrusted agent is held: queue wait and boot are not counted.
+          // A timeout here is not retried (retry only takes agent loss). EDIT: the
+          // workflow's timeout-minutes + ~5.
+          options { timeout(time: 30, unit: 'MINUTES') }
+          stages {
+            stage('Container') {
+              steps {
+                // One container per build; every step below runs in it with `docker exec`. Same
+                // uid as the agent so the workspace stays deletable. --cpus 2 --memory 7g on a
+                // 4 vCPU / 16 GB single-use host.
+                sh '''
+                  set -eu
+                  docker rm -f "$CI_CTR" >/dev/null 2>&1 || true
+                  cache="$HOME/.cache/ci-npm/$CI_CACHE_KEY"
+                  mkdir -p "$cache"
+                  docker run -d --init --name "$CI_CTR" \
+                    --cpus 2 --memory 7g \
+                    -u "$(id -u):$(id -g)" -e HOME=/tmp -e CI=true -e npm_config_cache=/tmp/.npm \
+                    -v "$WORKSPACE:$WORKSPACE" -w "$WORKSPACE" \
+                    -v "$cache:/tmp/.npm" \
+                    "$CI_IMAGE" sleep infinity
+                  docker exec "$CI_CTR" sh -c 'node -v && npm -v'
+                  docker exec "$CI_CTR" npm ci
+                  git rev-parse HEAD
+                '''
+              }
+            }
 
-        // `npm ci` above (the lock file decides), then the page tests; the browsers ship in the image.
-        stage('Test') {
-          steps { sh 'docker exec "$CI_CTR" npm test' }
+            // `npm ci` above (the lock file decides), then the page tests; the browsers ship in the image.
+            stage('Test') {
+              steps { sh 'docker exec "$CI_CTR" npm test' }
+            }
+          }
         }
       }
       post {
